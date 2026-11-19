@@ -8,8 +8,8 @@
 
 ### Added
 
-- 四个角色技能：`product-design`、`ui-design`、`frontend-dev`、`backend-dev`。
-- 四个角色预设：`presets/*.yaml`，只引用技能名，不内联技能内容。
+- 首批四个角色技能：`product-design`、`ui-design`、`frontend-dev`、`backend-dev`。
+- 首批四个角色预设：`presets/*.yaml`，只引用技能名，不内联技能内容。
 - 零依赖校验器 `scripts/validate-skills.mjs`：校验 SKILL.md frontmatter、技能名与目录一致性、预设引用完整性、CHANGELOG 结构。
 - CI：push / PR 到 `main` 时执行校验。
 - Release Please 配置与发版工作流。

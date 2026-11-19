@@ -1,10 +1,12 @@
 # dsh-kit
 
-**DSH 四角色技能与预设集**：产品设计 / UI 设计 / 前端开发 / 后端开发。
+**DSH 预设与技能集**：把角色、团队或工作流的预设，连同它们引用的技能，做成可版本化、可校验、可发版的仓库。
 
-本仓库不是代码库，而是「角色定义 + 技能 + 流程约束」的可版本化集合：`skills/` 是技能的唯一真源，`presets/` 只引用技能名、不内联技能内容，CI 校验 frontmatter 与引用完整性，Release Please 按 Conventional Commits 发版。
+本仓库不是代码库，而是「预设 + 技能 + 流程约束」的集合：`skills/` 是技能的唯一真源，`presets/` 只引用技能名、不内联技能内容，CI 校验 frontmatter 与引用完整性，Release Please 按 Conventional Commits 发版。
 
 [![validate](https://github.com/Lixb53/dsh-kit/actions/workflows/validate.yml/badge.svg)](https://github.com/Lixb53/dsh-kit/actions/workflows/validate.yml)
+
+> 当前收录四个角色预设作为**初始集**（产品设计 / UI 设计 / 前端开发 / 后端开发）。仓库不限定预设的数量与形态：新角色、团队预设、评审器（critic）预设、单一工作流预设，都可以按同一套约定加入。
 
 ---
 
@@ -12,13 +14,13 @@
 
 | 目录 | 内容 | 规则 |
 |---|---|---|
-| `skills/<name>/SKILL.md` | 角色级技能（Agent Skills 规范，YAML frontmatter + Markdown 正文） | 一个技能一个目录；`name` 必须与目录名一致，lowercase kebab-case |
-| `presets/<name>.yaml` | 角色预设：职责、引用哪些技能、工具/MCP、评审维度、交付物 | 只引用技能名，不复制技能正文 |
-| `docs/` | 角色协作、技能选型、预设字段说明 | 与实现同步更新 |
+| `skills/<name>/SKILL.md` | 技能（Agent Skills 规范，YAML frontmatter + Markdown 正文） | 一个技能一个目录；`name` 必须与目录名一致，lowercase kebab-case |
+| `presets/<name>.yaml` | 预设：职责、引用哪些技能、工具/MCP、评审维度、交付物 | `id` 与文件名一致；只引用技能名，不复制技能正文 |
+| `docs/` | 协作模型、技能选型、预设字段说明、排版规范 | 与实现同步更新 |
 | `scripts/validate-skills.mjs` | 本地/CI 校验器（零依赖 Node） | 必须通过才能合并 |
 | `.github/` | CI、Release Please、Issue/PR 模板 | 模板用于对齐信息，不是形式 |
 
-### 四个角色
+### 已收录的预设（初始集）
 
 | 预设 | 职责 | 主要交付物 |
 |---|---|---|
@@ -27,7 +29,18 @@
 | `frontend-dev` | 把设计落地为可运行、可维护、可测试的前端代码 | 组件与页面、性能预算报告、E2E 用例、代码审查结论 |
 | `backend-dev` | 约束下的有依据方案：架构、数据、接口、可靠性 | ADR、数据模型、API 契约、容量与失败模式分析、迁移方案 |
 
-角色之间是**单向交接**：产品 → UI → 前端/后端；每次交接必须带「可验收的产物」，而不是口头结论。详见 [`docs/architecture.md`](docs/architecture.md)。
+这四个预设构成「产品 → UI → 前端/后端」的单向交接链，详见 [`docs/architecture.md`](docs/architecture.md)。它是**一个**可用的协作模型，不是仓库的边界；新增预设不必与这四个同构。
+
+### 新增一个预设
+
+```bash
+mkdir -p skills/my-skill presets
+$EDITOR skills/my-skill/SKILL.md    # name 与目录名一致
+$EDITOR presets/my-skill.yaml       # id 与文件名一致，skills 引用上面的技能
+node scripts/validate-skills.mjs
+```
+
+字段说明见 [`docs/presets.md`](docs/presets.md)。一个预设可以只引用已有技能（组合式），也可以同时带一个新技能；评审器类预设通常只引用技能、并把工具收紧为只读。
 
 ---
 
@@ -42,7 +55,7 @@ cd dsh-kit
 
 ### 2. 在 DSH 中挂载技能
 
-在对应预设的 `cordis.patch.yml` 里，把技能目录指向本仓库（按角色隔离，互不污染）：
+在预设的 `cordis.patch.yml` 里，把技能目录指向本仓库：
 
 ```yaml
 - id: skill-filesystem
@@ -55,11 +68,11 @@ cd dsh-kit
   name: '@deepseek-ai/dsh-tool-skill'
 ```
 
-> 一条 `customSkillDirs` 会暴露 `skills/` 下全部角色技能。若希望每个预设只看到自己的技能，把四个角色技能拆到独立目录，或按预设分别指定子目录。
+> 一条 `customSkillDirs` 会暴露 `skills/` 下全部技能。若希望每个预设只看到自己的技能，把技能拆到独立子目录，或在各预设里分别指定子目录。
 
-### 3. 选用预设
+### 3. 选用或新增预设
 
-`presets/*.yaml` 是声明式清单，字段说明见 [`docs/presets.md`](docs/presets.md)。它描述「这个角色该有哪些技能、工具、评审维度和产物」，可直接作为 DSH 预设的配置来源，也可被脚本转成 `cordis.patch.yml`。
+`presets/*.yaml` 是声明式清单，描述「这个预设该有哪些技能、工具、评审维度和产物」。可直接作为 DSH 预设的配置来源，也可被脚本转成 `cordis.patch.yml`（转译示例见 [`docs/presets.md`](docs/presets.md)）。
 
 ---
 
@@ -75,7 +88,8 @@ node scripts/validate-skills.mjs
 - `name` 与目录名一致且为 lowercase kebab-case；
 - `description` 非空且不超过 1024 字符；
 - 每个 `presets/*.yaml` 的 `id` 与文件名一致，`skills:` 引用的技能全部存在；
-- `CHANGELOG.md` 含 `## [Unreleased]`。
+- `CHANGELOG.md` 含 `## [Unreleased]`；
+- `version.txt` 与 `.release-please-manifest.json` 的版本一致。
 
 CI 在 push / PR 到 `main` 时执行同一脚本，失败即阻止合并。
 
