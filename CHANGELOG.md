@@ -4,6 +4,13 @@
 
 格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
+## [1.2.0](https://github.com/Lixb53/dsh-kit/compare/v1.1.0...v1.2.0) (2026-11-19)
+
+
+### Features
+
+* **skills:** 外部技能安装与维护脚本（增删改/版本 pin/按角色隔离） ([8b63960](https://github.com/Lixb53/dsh-kit/commit/8b6396043c250bd7f29ec99c6e8c7cee3ea5caab))
+
 ## [1.1.0](https://github.com/Lixb53/dsh-kit/compare/v1.0.1...v1.1.0) (2026-11-19)
 
 
