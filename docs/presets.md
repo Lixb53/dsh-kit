@@ -38,7 +38,6 @@
 ```yaml
 id: my-role
 name: 我的角色
-version: 0.1.0
 persona: |
   你是……
 skills:
