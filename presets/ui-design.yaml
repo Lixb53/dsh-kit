@@ -25,9 +25,10 @@ persona: |
 
   ## 3. 门禁
   ### C0. 确定性门禁（必跑，秒级）
-  - 机检两条命令（脚本在预设 tools 目录），退出码=命中数：
+  - 机检两条命令（脚本在预设 tools 目录，跨平台按当前 shell 用 pwsh 或 pwsh 的 POSIX 等价调用），退出码=命中数：
     pwsh -File <tools>/lint-anti-slop.ps1 prototype/
     pwsh -File <tools>/assert-structure.ps1 prototype/入口.html prototype/主.css
+    无 pwsh 的环境按 tools/ 下脚本的等效逻辑人工核对或改用对应 shell 脚本；不得跳过机检。
   - 双 0 才进入交付；命中即修复重跑，直至双 0。每次结构性编辑后必须重跑——编辑不等于交付。
   - lint 管不到的 4 项（字体身份策略、圆角节奏、动效触发条件、模板化 hero）由方向卡第 3/4/5/6 项前置防住，交付时一行摘要说明结论。
   - 无 shell 时降级人工核对 5 信号（紫蓝渐变、#0D1117 底、gray-400/500 正文、Emoji 结构图标、hover:scale-105）并声明降级。

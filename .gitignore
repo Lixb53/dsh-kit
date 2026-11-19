@@ -10,3 +10,6 @@ Thumbs.db
 coverage/
 # 外部技能的本地安装目录映射（路径因机器而异，不入库）
 external-skills.local.yaml
+# 生成物：按本机路径推导的 bundle 与 patch 不入库（换机器重新生成）
+.generated/
+cordis.patch.yml

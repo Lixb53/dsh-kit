@@ -53,10 +53,14 @@ deliverables:
 不需要手写 `cordis.patch.yml`：
 
 ```bash
+npm run install:presets   # 推荐：生成可迁移、可卸载的本地 bundle
+# 或仅渲染 patch 调试：
 node scripts/render-presets.mjs --out cordis.patch.yml
 ```
 
-脚本会为每个预设生成一条 `@deepseek-ai/dsh-agent-preset` 插入项，并把 `critic.enabled: true` 的预设渲染成两条：主预设 + `<id>-critic` 只读评审预设（`tool-fs` 关掉 write/edit，不挂 shell）。生成结果的结构由 `scripts/check-render.mjs` 校验。
+`install:presets` 会在本机生成 `.generated/dsh-role-presets/`（`@local/dsh-role-presets` bundle），用 `plugin_manager install_bundle` 安装。脚本为每个预设生成一条 `@deepseek-ai/dsh-agent-preset` 插入项，并把 `critic.enabled: true` 的预设渲染成两条：主预设 + `<id>-critic` 只读评审预设（`tool-fs` 关掉 write/edit，不挂 shell）。生成结果的结构由 `scripts/check-render.mjs` 校验。
+
+渲染器也可作为模块导入（`renderPresets()` / `REPO_ROOT`），这样校验与安装脚本无需子进程，规避某些沙箱下的 `spawn EPERM`。
 
 ### 技能挂载是自动的
 
@@ -65,10 +69,10 @@ DSH 的技能根是「一级目录 = 一个技能」，一条 `customSkillDirs` 
 ```yaml
 # presets/product-design.yaml 引用 product-design
 customSkillDirs:
-  - 'G:\dsh-kit\skills\product'
+  - '<本机仓库根>/skills/product'
 ```
 
-结果：选中 `product-design` 预设时，只看到 `product` 分组里的技能，不会看到 `design` / `frontend` / `backend` 的技能。
+`<本机仓库根>` 由 `render-presets.mjs` 在**目标机器**运行时推导（默认从脚本位置计算，与 cwd / 操作系统无关），不入库、不写死盘符。结果：选中 `product-design` 预设时，只看到 `product` 分组里的技能，不会看到 `design` / `frontend` / `backend` 的技能。
 
 两条约束由 `check-render.mjs` 强制：
 
@@ -96,7 +100,7 @@ customSkillDirs:
             config:
               includeDefaultRoots: false
               customSkillDirs:
-                - 'G:\dsh-kit\skills'
+                - '<本机仓库根>/skills'
           - id: tool-skill
             name: '@deepseek-ai/dsh-tool-skill'
           - id: tool-fs
@@ -114,6 +118,7 @@ customSkillDirs:
 注意：
 
 - `customSkillDirs` 指向**分组目录**；渲染器已按 `skills:` 自动填写，一般不需要手写。
+- 不要在仓库里提交绝对路径：生成物（`.generated/`、`cordis.patch.yml`）和外部技能本机映射（`external-skills.local.yaml`）都已 gitignore，换机器时重新生成/配置。
 - `critic` 需要另建一个只读预设（`tool-fs` 关掉 write/edit），否则评审者会顺手改文件。
 - `persona` 里的「不做什么」比「做什么」更重要，它决定角色边界。
 

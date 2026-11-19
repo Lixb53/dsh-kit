@@ -14,19 +14,27 @@
  *     childList:
  *       - 项
  *
+ * 可移植性：本脚本不写入任何机器专属的常量路径。customSkillDirs 由调用时的
+ * root 推导（默认=本仓库根目录，从脚本位置计算，与 cwd / 操作系统无关）。
+ * 换机器或换 OS 时在目标机器上重新运行 install-presets.mjs 即可。
+ *
  * 用法：
  *   node scripts/render-presets.mjs                     # 打印到 stdout
  *   node scripts/render-presets.mjs --out cordis.patch.yml
- *   node scripts/render-presets.mjs --skills-dir 'G:\dsh-kit\skills'
+ *   node scripts/render-presets.mjs --skills-dir /abs/path/to/skills
  *   node scripts/render-presets.mjs --only product-design,ui-design
+ *
+ * 也可作为模块导入（check-render.mjs / install-presets.mjs 这样做，避免子进程 EPERM）：
+ *   import { renderPresets, REPO_ROOT } from './render-presets.mjs';
  */
 
 import { readFileSync, readdirSync, writeFileSync, existsSync, statSync } from 'node:fs';
-import { join, basename } from 'node:path';
+import { join, basename, dirname, resolve } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
-// ---------------------------------------------------------------------------
-// 参数
-// ---------------------------------------------------------------------------
+const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
+/** 仓库根目录：从脚本位置推导，不依赖 process.cwd()，跨平台一致。 */
+export const REPO_ROOT = resolve(SCRIPT_DIR, '..');
 
 const argv = process.argv.slice(2);
 function arg(flag, fallback = null) {
@@ -34,58 +42,8 @@ function arg(flag, fallback = null) {
   return i !== -1 && argv[i + 1] && !argv[i + 1].startsWith('--') ? argv[i + 1] : fallback;
 }
 
-const root = arg('--root') ?? process.cwd();
-const presetsDir = join(root, 'presets');
-const skillsDir = arg('--skills-dir') ?? join(root, 'skills');
-const outPath = arg('--out');
-const only = (arg('--only') ?? '')
-  .split(',')
-  .map((s) => s.trim())
-  .filter(Boolean);
-const withCritic = !argv.includes('--no-critic');
-
-/**
- * 外部技能的「本地挂载映射」是可复现安装的最后一环，但路径因机器而异，不能入库。
- * 默认读取根目录下 external-skills.local.yaml，也可用 --external-config 指定：
- *   预设 id:
- *     - 本地安装目录（该目录及其下每个含 SKILL.md 的子目录都会被暴露）
- * 它只往渲染结果里加挂载目录，不改动 presets/*.yaml 的声明。
- */
-const externalConfigPath = arg('--external-config') ?? join(root, 'external-skills.local.yaml');
-let externalMounts = {};
-if (existsSync(externalConfigPath)) {
-  const parsed = parseYaml(readFileSync(externalConfigPath, 'utf8'));
-  if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-    externalMounts = parsed;
-  } else {
-    console.error(`warn  外部技能挂载配置 ${externalConfigPath} 顶层应为「预设 id: 目录列表」`);
-  }
-}
-
-if (!existsSync(presetsDir)) {
-  console.error(`✗ 找不到 presets/：${presetsDir}`);
-  process.exit(1);
-}
-
-/**
- * 仓库版本只认 version.txt（Release Please 维护）。
- * 预设文件不写 version，渲染时统一注入，避免多处漂移。
- */
-function readRepoVersion() {
-  const versionPath = join(root, 'version.txt');
-  if (!existsSync(versionPath)) return null;
-  const version = readFileSync(versionPath, 'utf8').trim();
-  return /^\d+\.\d+\.\d+/.test(version) ? version : null;
-}
-
-const repoVersion = readRepoVersion();
-if (!repoVersion) {
-  console.error(`✗ 无法从 ${join(root, 'version.txt')} 读取版本号`);
-  process.exit(1);
-}
-
 // ---------------------------------------------------------------------------
-// YAML 子集解析
+// YAML 子集解析（纯函数）
 // ---------------------------------------------------------------------------
 
 function indentOf(line) {
@@ -132,7 +90,6 @@ function parseYaml(text) {
 
   let i = 0;
   function parseBlock(baseIndent) {
-    // 返回 { obj } 或 { list }
     const result = { obj: {}, list: [] };
     let mode = null;
 
@@ -178,7 +135,6 @@ function parseYaml(text) {
         continue;
       }
 
-      // 空值：向下看是列表还是子映射
       const next = lines[i];
       if (!next || indentOf(next) <= indent) {
         result.obj[key] = null;
@@ -197,7 +153,7 @@ function parseYaml(text) {
 }
 
 // ---------------------------------------------------------------------------
-// 渲染
+// 渲染辅助（纯函数）
 // ---------------------------------------------------------------------------
 
 function q(s) {
@@ -218,7 +174,6 @@ function renderSkillDirs(dirs) {
 
 /**
  * 扫描 skills/<group>/<name>/SKILL.md，返回 name -> { group, path }。
- * 分组目录会被直接挂给自定义技能根，所以每个预设只挂自己用到的那几个分组。
  */
 function scanSkills(baseDir) {
   const index = new Map();
@@ -229,12 +184,11 @@ function scanSkills(baseDir) {
     (n) => existsSync(join(baseDir, n, 'SKILL.md')) && statSync(join(baseDir, n)).isDirectory(),
   );
 
-  // --skills-dir 直接指向一个分组目录时，把它自己当作唯一分组，避免整棵树被跳过
   const groupDirs = looksLikeGroup
     ? [{ group: basename(baseDir), path: baseDir }]
     : children
         .filter((n) => !n.startsWith('.') && statSync(join(baseDir, n)).isDirectory())
-        .filter((n) => !existsSync(join(baseDir, n, 'SKILL.md'))) // 布局错误，交给校验器报告
+        .filter((n) => !existsSync(join(baseDir, n, 'SKILL.md')))
         .map((n) => ({ group: n, path: join(baseDir, n) }));
 
   for (const { group, path } of groupDirs) {
@@ -249,13 +203,19 @@ function scanSkills(baseDir) {
   return index;
 }
 
-/**
- * 按预设引用的技能，算出需要挂载的分组目录（去重、保持声明顺序）。
- * 再合并 external-skills.local.yaml 里为该预设配置的本地外部技能安装目录。
- * 合并后目录以真实路径交给 skill-filesystem，不做 basename 去重：
- * 本地目录可能与服务内部同名分组不同，必须以完整路径为准。
- */
-function skillDirsForPreset(preset, skillIndex, fallbackDir) {
+function loadExternalMounts(externalConfigPath) {
+  if (!existsSync(externalConfigPath)) return {};
+  try {
+    const parsed = parseYaml(readFileSync(externalConfigPath, 'utf8'));
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
+    console.error(`warn  外部技能挂载配置 ${externalConfigPath} 顶层应为「预设 id: 目录列表」`);
+  } catch (e) {
+    console.error(`warn  外部技能挂载配置 ${externalConfigPath} 解析失败：${e.message}`);
+  }
+  return {};
+}
+
+function skillDirsForPreset(preset, skillIndex, fallbackDir, externalMounts) {
   const refs = Array.isArray(preset.skills) ? preset.skills : [];
   const dirs = [];
   for (const ref of refs) {
@@ -269,8 +229,7 @@ function skillDirsForPreset(preset, skillIndex, fallbackDir) {
   if (Array.isArray(external)) {
     for (const raw of external) {
       const d = typeof raw === 'string' ? raw.trim() : '';
-      if (!d) continue;
-      if (!dirs.includes(d)) dirs.push(d);
+      if (d && !dirs.includes(d)) dirs.push(d);
     }
   }
   return dirs;
@@ -280,9 +239,7 @@ function summarizeDescription(preset) {
   if (typeof preset.description === 'string' && preset.description.trim()) {
     return preset.description.trim();
   }
-  const flat = String(preset.persona ?? '')
-    .replace(/\s+/g, ' ')
-    .trim();
+  const flat = String(preset.persona ?? '').replace(/\s+/g, ' ').trim();
   if (!flat) return preset.name;
   return flat.length > 80 ? `${flat.slice(0, 80)}…` : flat;
 }
@@ -300,14 +257,12 @@ function renderPreset(preset, opts) {
   if (version) lines.push(`        version: ${q(version)}`);
   lines.push(`        plugins:`);
 
-  // persona
   lines.push(`          - id: persona`);
   lines.push(`            name: '@deepseek-ai/dsh-persona'`);
   lines.push(`            config:`);
   lines.push(`              prefix: |`);
   lines.push(indentBlock(preset.persona ?? '', 16));
 
-  // skills
   lines.push(`          - id: skill-filesystem`);
   lines.push(`            name: '@deepseek-ai/dsh-skill-filesystem'`);
   lines.push(`            config:`);
@@ -317,35 +272,19 @@ function renderPreset(preset, opts) {
   lines.push(`          - id: tool-skill`);
   lines.push(`            name: '@deepseek-ai/dsh-tool-skill'`);
 
-  // tools
   const tools = Array.isArray(preset.tools) ? preset.tools : [];
   const toolMap = {
-    fs: [
-      `          - id: tool-fs`,
-      `            name: '@deepseek-ai/dsh-tool-fs'`,
-    ],
-    pwsh: [
-      `          - id: tool-pwsh`,
-      `            name: '@deepseek-ai/dsh-tool-pwsh'`,
-    ],
+    fs: [`          - id: tool-fs`, `            name: '@deepseek-ai/dsh-tool-fs'`],
+    pwsh: [`          - id: tool-pwsh`, `            name: '@deepseek-ai/dsh-tool-pwsh'`],
     web: [
       `          - id: tool-web`,
       `            name: '@deepseek-ai/dsh-tool-web'`,
       `            config:`,
       `              fetch: true`,
     ],
-    jobs: [
-      `          - id: tool-jobs`,
-      `            name: '@deepseek-ai/dsh-tool-jobs'`,
-    ],
-    todo: [
-      `          - id: tool-todo`,
-      `            name: '@deepseek-ai/dsh-tool-todo'`,
-    ],
-    present: [
-      `          - id: present`,
-      `            name: '@deepseek-ai/dsh-tool-present'`,
-    ],
+    jobs: [`          - id: tool-jobs`, `            name: '@deepseek-ai/dsh-tool-jobs'`],
+    todo: [`          - id: tool-todo`, `            name: '@deepseek-ai/dsh-tool-todo'`],
+    present: [`          - id: present`, `            name: '@deepseek-ai/dsh-tool-present'`],
     askUser: [
       `          - id: tool-ask-user`,
       `            name: '@deepseek-ai/dsh-tool-ask-user'`,
@@ -355,8 +294,7 @@ function renderPreset(preset, opts) {
     if (toolMap[t]) lines.push(...toolMap[t]);
   }
 
-  // critic
-  if (withCritic && preset.critic && preset.critic.enabled && criticPresetId) {
+  if (withCriticGlobal && preset.critic && preset.critic.enabled && criticPresetId) {
     lines.push(`          - id: critic`);
     lines.push(`            name: '@deepseek-ai/dsh-tool-subagent'`);
     lines.push(`            config:`);
@@ -367,6 +305,8 @@ function renderPreset(preset, opts) {
 
   return lines.join('\n');
 }
+
+let withCriticGlobal = true;
 
 function renderCritic(preset, opts) {
   const { skillsDirs } = opts;
@@ -426,74 +366,118 @@ function renderCritic(preset, opts) {
 }
 
 // ---------------------------------------------------------------------------
-// 主流程
+// 可复用入口
 // ---------------------------------------------------------------------------
 
-const files = readdirSync(presetsDir)
-  .filter((n) => /\.ya?ml$/.test(n))
-  .filter((n) => (only.length ? only.includes(basename(n).replace(/\.(ya?ml)$/, '')) : true))
-  .sort();
+/**
+ * @returns {string} 渲染出的 cordis.patch.yml 文本（路径按本机 root 推导）
+ */
+export function renderPresets({
+  root = REPO_ROOT,
+  skillsDir = join(root, 'skills'),
+  presetsDir = join(root, 'presets'),
+  externalConfigPath = join(root, 'external-skills.local.yaml'),
+  only = [],
+  withCritic = true,
+} = {}) {
+  withCriticGlobal = withCritic;
 
-if (files.length === 0) {
-  console.error(`✗ 没有匹配的预设文件（--only ${only.join(',') || '—'}）`);
-  process.exit(1);
-}
-
-const skillIndex = scanSkills(skillsDir);
-if (skillIndex.size === 0) {
-  console.error(`✗ ${skillsDir} 下没有找到 skills/<group>/<name>/SKILL.md`);
-  process.exit(1);
-}
-
-const criticPresetId = (id) => `${id}-critic`;
-
-const blocks = [];
-for (const file of files) {
-  const preset = parseYaml(readFileSync(join(presetsDir, file), 'utf8'));
-  if (!preset.id) {
-    console.error(`✗ ${file}: 缺少 id，已跳过`);
-    continue;
+  if (!existsSync(presetsDir)) {
+    throw new Error(`找不到 presets/：${presetsDir}`);
   }
 
-  const skillsDirs = skillDirsForPreset(preset, skillIndex, skillsDir);
-  const missing = (Array.isArray(preset.skills) ? preset.skills : []).filter(
-    (s) => !skillIndex.has(s),
-  );
-  for (const m of missing) {
-    console.error(`warn  ${file}: 技能 "${m}" 未在 ${skillsDir} 下找到，未挂载`);
+  const versionPath = join(root, 'version.txt');
+  let repoVersion = null;
+  if (existsSync(versionPath)) {
+    const version = readFileSync(versionPath, 'utf8').trim();
+    if (/^\d+\.\d+\.\d+/.test(version)) repoVersion = version;
+  }
+  if (!repoVersion) throw new Error(`无法从 ${versionPath} 读取版本号`);
+
+  const externalMounts = loadExternalMounts(externalConfigPath);
+  const skillIndex = scanSkills(skillsDir);
+  if (skillIndex.size === 0) {
+    throw new Error(`${skillsDir} 下没有找到 skills/<group>/<name>/SKILL.md`);
   }
 
-  // external_skills 只是声明：没有本地挂载配置时不会进入任何 customSkillDirs。
-  const externalRefs = Array.isArray(preset.external_skills) ? preset.external_skills : [];
-  if (externalRefs.length > 0 && !Array.isArray(externalMounts[preset.id])) {
-    console.error(
-      `warn  ${file}: 声明了 ${externalRefs.length} 个 external_skills，但 ${externalConfigPath} 未为其配置本地安装目录；这些技能本次不会挂载（方案 C：清单与安装分离）`,
+  const criticPresetId = (id) => `${id}-critic`;
+
+  const files = readdirSync(presetsDir)
+    .filter((n) => /\.ya?ml$/.test(n))
+    .filter((n) => (only.length ? only.includes(basename(n).replace(/\.(ya?ml)$/, '')) : true))
+    .sort();
+
+  if (files.length === 0) {
+    throw new Error(`没有匹配的预设文件（--only ${only.join(',') || '—'}）`);
+  }
+
+  const blocks = [];
+  for (const file of files) {
+    const preset = parseYaml(readFileSync(join(presetsDir, file), 'utf8'));
+    if (!preset.id) {
+      console.error(`warn  ${file}: 缺少 id，已跳过`);
+      continue;
+    }
+
+    const skillsDirs = skillDirsForPreset(preset, skillIndex, skillsDir, externalMounts);
+    const missing = (Array.isArray(preset.skills) ? preset.skills : []).filter(
+      (s) => !skillIndex.has(s),
     );
+    for (const m of missing) {
+      console.error(`warn  ${file}: 技能 "${m}" 未在 ${skillsDir} 下找到，未挂载`);
+    }
+
+    const externalRefs = Array.isArray(preset.external_skills) ? preset.external_skills : [];
+    if (externalRefs.length > 0 && !Array.isArray(externalMounts[preset.id])) {
+      console.error(
+        `warn  ${file}: 声明了 ${externalRefs.length} 个 external_skills，但 ${externalConfigPath} 未为其配置本地安装目录；这些技能本次不会挂载（方案 C：清单与安装分离）`,
+      );
+    }
+
+    const opts = { skillsDirs, criticPresetId, version: repoVersion };
+    const parts = [renderPreset(preset, opts)];
+    if (withCritic && preset.critic && preset.critic.enabled) {
+      parts.push(renderCritic(preset, opts));
+    }
+    blocks.push(parts.join('\n'));
   }
 
-  const opts = { skillsDirs, criticPresetId, version: repoVersion };
+  const header = [
+    `# 由 scripts/render-presets.mjs 生成；改动请改 presets/*.yaml 后重新生成。`,
+    `# 挂载方式：把本文件内容并入 profile 的 cordis.patch.yml，或作为 --patch 覆盖层。`,
+    `# 生成参数：version=${repoVersion}  skills=${skillsDir}${withCritic ? '' : '  critic=off'}`,
+    `# 每个预设只挂载它引用的技能所在的分组目录，预设之间不共享技能。`,
+    ``,
+    `- insert:`,
+  ].join('\n');
 
-  const parts = [renderPreset(preset, opts)];
-  if (withCritic && preset.critic && preset.critic.enabled) {
-    parts.push(renderCritic(preset, opts));
-  }
-  blocks.push(parts.join('\n'));
+  return `${header}\n${blocks.join('\n')}\n`;
 }
 
-const header = [
-  `# 由 scripts/render-presets.mjs 生成；改动请改 presets/*.yaml 后重新生成。`,
-  `# 挂载方式：把本文件内容并入 profile 的 cordis.patch.yml，或作为 --patch 覆盖层。`,
-  `# 生成参数：version=${repoVersion}  skills=${skillsDir}${withCritic ? '' : '  critic=off'}`,
-  `# 每个预设只挂载它引用的技能所在的分组目录，预设之间不共享技能。`,
-  ``,
-  `- insert:`,
-].join('\n');
+// ---------------------------------------------------------------------------
+// CLI
+// ---------------------------------------------------------------------------
 
-const output = `${header}\n${blocks.join('\n')}\n`;
+function main() {
+  const root = arg('--root') ?? REPO_ROOT;
+  const outPath = arg('--out');
+  const only = (arg('--only') ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const withCritic = !argv.includes('--no-critic');
+  const skillsDir = arg('--skills-dir') ?? join(root, 'skills');
 
-if (outPath) {
-  writeFileSync(outPath, output, 'utf8');
-  console.log(`✓ 已生成 ${outPath}（${files.length} 个预设）`);
-} else {
-  process.stdout.write(output);
+  const output = renderPresets({ root, skillsDir, only, withCritic });
+
+  if (outPath) {
+    writeFileSync(outPath, output, 'utf8');
+    console.log(`✓ 已生成 ${outPath}（${only.length || '全部'} 个预设过滤）`);
+  } else {
+    process.stdout.write(output);
+  }
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main();
 }

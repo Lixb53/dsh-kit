@@ -16,8 +16,8 @@
 
 import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs';
 import { join, basename } from 'node:path';
-import { execFileSync } from 'node:child_process';
 import { createRequire } from 'node:module';
+import { renderPresets } from './render-presets.mjs';
 
 const require = createRequire(import.meta.url);
 const root = process.cwd();
@@ -68,15 +68,15 @@ function parseYamlList(text, key) {
   return items;
 }
 
-// 1. 渲染（透传 --external-config，保证被校验的结果与外层渲染一致）
+// 1. 渲染（直接调用函数，避免子进程 EPERM；透传 --external-config 与安装时一致）
 let rendered;
 try {
-  const renderArgs = [join(root, 'scripts', 'render-presets.mjs'), '--root', root];
   const flagIdx = process.argv.indexOf('--external-config');
-  if (flagIdx !== -1 && process.argv[flagIdx + 1]) {
-    renderArgs.push('--external-config', process.argv[flagIdx + 1]);
-  }
-  rendered = execFileSync(process.execPath, renderArgs, { encoding: 'utf8' });
+  const externalConfigPath =
+    flagIdx !== -1 && process.argv[flagIdx + 1]
+      ? process.argv[flagIdx + 1]
+      : join(root, 'external-skills.local.yaml');
+  rendered = renderPresets({ root, externalConfigPath });
 } catch (e) {
   console.error(`✗ 渲染失败：${e.message}`);
   process.exit(1);

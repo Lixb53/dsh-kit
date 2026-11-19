@@ -78,35 +78,50 @@ git clone https://github.com/Lixb53/dsh-kit.git
 cd dsh-kit
 ```
 
-### 2. 渲染成 DSH 配置
+### 2. 生成本机 bundle（跨平台、可迁移）
 
-不用手写 `cordis.patch.yml`：
+不用手写 `cordis.patch.yml`，也不要把生成物提交进仓库：
 
 ```bash
 npm ci
-node scripts/render-presets.mjs --out cordis.patch.yml
+npm run install:presets
 ```
 
-生成的文件是一段 `- insert:` 列表，可直接并入 profile 的 `cordis.patch.yml`，或作为 `--patch` 覆盖层使用。每个预设的技能挂载长这样：
+脚本在**本机**渲染，生成 `.generated/dsh-role-presets/`（含 `package.json` + `cordis.patch.yml`）。路径由运行时的仓库根推导——不依赖当前工作目录，也不写死 `G:\` 或 `/home`，Windows / macOS / Linux 通用。`.generated/` 与 `cordis.patch.yml` 都已 gitignore。
+
+每个预设的技能挂载长这样（目录由本机 root 推导）：
 
 ```yaml
-- id: skill-filesystem
-  name: '@deepseek-ai/dsh-skill-filesystem'
-  config:
-    includeDefaultRoots: false
-    customSkillDirs:
-      - 'G:\dsh-kit\skills\product'   # 只挂 product 分组
+customSkillDirs:
+  - '<本机仓库根>/skills/product'   # 只挂 product 分组
 ```
 
 常用参数：
 
 ```bash
-node scripts/render-presets.mjs --only product-design,ui-design   # 只渲染部分预设
+node scripts/install-presets.mjs --only product-design,ui-design  # 只生成部分预设
 node scripts/render-presets.mjs --no-critic                       # 不生成评审预设
-node scripts/render-presets.mjs --skills-dir /abs/path/to/skills  # 指定技能根
+node scripts/render-presets.mjs --out cordis.patch.yml            # 只渲染 patch（调试用）
 ```
 
-### 3. 选用预设
+### 3. 安装到 DSH
+
+把上一步生成的 `.generated/dsh-role-presets/` 作为 bundle 安装（用 `plugin_manager install_bundle` 或 GUI 插件管理）。它声明为 `@local/dsh-role-presets`，可整体卸载、重装、升级。
+
+### 4. 换机器 / 换系统
+
+仓库本身不含任何机器专属路径，迁移只需：
+
+```bash
+git clone <repo> && cd dsh-kit
+npm ci
+npm run install:presets
+# 把新生成的 .generated/dsh-role-presets/ 装进本机的 DSH profile
+```
+
+旧机器上的 bundle 留着无妨；新机器重新生成、重新安装即可。外部技能的本机路径写在 gitignore 的 `external-skills.local.yaml` 里，同样每台机器各配一份。
+
+### 5. 选用预设
 
 `presets/*.yaml` 是声明式清单，描述「这个预设该有哪些技能、工具、评审维度和产物」。字段说明见 [`docs/presets.md`](docs/presets.md)。
 
