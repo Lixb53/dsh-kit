@@ -36,6 +36,12 @@
 
 ## [Unreleased]
 
+### Changed
+
+- 四个预设的 `persona` 按 `research/四角色预设提示词-按需critic版` 完善为完整行为契约：范围分级、分阶段工作流、确定性门禁 C0、按需 critic 门禁 C1（默认关闭，仅 T1/T2/T3 命中时跑恰好一次，未触发须显式声明）。
+- `frontend-dev` persona 改为框架中立：启动先读项目 AGENTS.md 识别框架/版本，框架技能随项目 `.dsh/skills` 走，预设只维护一份、不预置任何框架技能目录。
+- 四个预设的 critic 评审维度与 persona 内 C1 声明对齐；`product-design` / `ui-design` / `frontend-dev` / `backend-dev` 的交付物补齐 review 子目录与确认单路径。
+
 ### Added
 
 - `docs/external-skills.md`：外部技能「清单与安装分离」方案——预设声明 + catalog 版本 pin + 本机挂载配置三段式，含可复现安装与挂载步骤。
