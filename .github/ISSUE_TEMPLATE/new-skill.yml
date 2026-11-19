@@ -1,0 +1,62 @@
+name: 新增技能 / 预设
+description: 提议一个新的角色技能或预设，或对现有技能做结构性扩展
+title: "[skill] "
+labels: ["enhancement"]
+body:
+  - type: input
+    id: name
+    attributes:
+      label: 名称
+      description: lowercase kebab-case，例如 product-design；新增技能时需与目录名一致
+      placeholder: my-skill
+    validations:
+      required: true
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: 类型
+      options:
+        - 新增技能（skills/<name>/SKILL.md）
+        - 新增预设（presets/<name>.yaml）
+        - 修改现有技能
+        - 修改现有预设
+    validations:
+      required: true
+
+  - type: textarea
+    id: purpose
+    attributes:
+      label: 用途
+      description: 它解决什么问题？什么时候应该被触发？
+      placeholder: 当用户需要……时，用它来……
+    validations:
+      required: true
+
+  - type: input
+    id: role
+    attributes:
+      label: 目标角色
+      description: 产品设计 / UI 设计 / 前端开发 / 后端开发 / 跨角色
+    validations:
+      required: true
+
+  - type: textarea
+    id: references
+    attributes:
+      label: 依赖与引用
+      description: 引用了哪些已有技能或外部技能包？是否需要 MCP？
+      placeholder: |
+        本仓库技能：product-design
+        外部技能包：one-line-prototype
+        MCP：无
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: 提交前确认
+      options:
+        - label: 已阅读 CONTRIBUTING.md 的目录与命名约定
+          required: true
+        - label: 已确认没有与现有技能重复
+          required: true
