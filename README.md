@@ -17,8 +17,9 @@
 ```
 skills/<group>/<name>/SKILL.md   # 技能：按分组存放，一个技能一个目录
 presets/<name>.yaml              # 预设：只引用技能名
+external-skills.local.example.yaml  # 外部技能本机挂载配置模板（复制为 .local.yaml 使用，后者不入库）
 scripts/                         # 校验 + 渲染
-docs/                            # 协作模型、字段说明、选型、排版
+docs/                            # 协作模型、字段说明、选型、排版、外部技能方案
 ```
 
 | 目录 | 内容 | 规则 |
@@ -28,7 +29,8 @@ docs/                            # 协作模型、字段说明、选型、排版
 | `scripts/validate-skills.mjs` | 零依赖校验器 | 必须通过才能合并 |
 | `scripts/render-presets.mjs` | 预设 → `cordis.patch.yml` 渲染器 | 按预设引用的技能自动算出要挂载的分组 |
 | `scripts/check-render.mjs` | 渲染结果校验器 | 校验 YAML、必需插件、只读评审、技能隔离 |
-| `docs/` | 协作模型、技能选型、预设字段说明、中文排版 | 与实现同步更新 |
+| `docs/` | 协作模型、技能选型、预设字段说明、外部技能方案、中文排版 | 与实现同步更新 |
+| `external-skills.local.example.yaml` | 外部技能本机挂载配置模板 | 复制为 `external-skills.local.yaml` 后填本机路径；后者已 gitignore，不入库 |
 
 **为什么按分组存技能**：DSH 的技能根是「一级目录 = 一个技能」，且一条 `customSkillDirs` 会暴露该目录下全部技能。把技能放进 `skills/<group>/` 后，预设只挂载自己用到的分组目录，选中某个预设就只看到该预设的技能，不会看到其他预设的技能。分组是隔离单元，技能名才是引用标识。
 

@@ -35,6 +35,24 @@ const err = (m) => errors.push(m);
 
 const presetsDir = join(root, 'presets');
 
+/** 读取与 render-presets.mjs 相同的外部技能本地挂载配置（可选）。 */
+function readExternalMounts() {
+  const argv = process.argv.slice(2);
+  const flagIdx = argv.indexOf('--external-config');
+  const path =
+    flagIdx !== -1 && argv[flagIdx + 1]
+      ? argv[flagIdx + 1]
+      : join(root, 'external-skills.local.yaml');
+  if (!existsSync(path)) return {};
+  try {
+    const doc = yaml.load(readFileSync(path, 'utf8'));
+    return doc && typeof doc === 'object' && !Array.isArray(doc) ? doc : {};
+  } catch {
+    return {};
+  }
+}
+const externalMounts = readExternalMounts();
+
 /** 从 YAML 文本里取某个顶层 key 的列表项。 */
 function parseYamlList(text, key) {
   const lines = text.split(/\r?\n/);
@@ -50,14 +68,15 @@ function parseYamlList(text, key) {
   return items;
 }
 
-// 1. 渲染
+// 1. 渲染（透传 --external-config，保证被校验的结果与外层渲染一致）
 let rendered;
 try {
-  rendered = execFileSync(
-    process.execPath,
-    [join(root, 'scripts', 'render-presets.mjs'), '--root', root],
-    { encoding: 'utf8' },
-  );
+  const renderArgs = [join(root, 'scripts', 'render-presets.mjs'), '--root', root];
+  const flagIdx = process.argv.indexOf('--external-config');
+  if (flagIdx !== -1 && process.argv[flagIdx + 1]) {
+    renderArgs.push('--external-config', process.argv[flagIdx + 1]);
+  }
+  rendered = execFileSync(process.execPath, renderArgs, { encoding: 'utf8' });
 } catch (e) {
   console.error(`✗ 渲染失败：${e.message}`);
   process.exit(1);
@@ -193,7 +212,15 @@ for (const file of readdirSync(presetsDir).filter((n) => /\.ya?ml$/.test(n))) {
     ?.customSkillDirs;
   if (!Array.isArray(dirs)) continue;
 
-  const mountedGroups = dirs.map((d) => basename(d.replace(/[\\/]+$/, '')));
+  // 外部技能目录是该预设在 external-skills.local.yaml 里显式声明的，豁免「无关分组」检查。
+  const allowedExternal = new Set(
+    (Array.isArray(externalMounts[id]) ? externalMounts[id] : []).map((d) =>
+      String(d).replace(/[\\/]+$/, ''),
+    ),
+  );
+  const internalDirs = dirs.filter((d) => !allowedExternal.has(String(d).replace(/[\\/]+$/, '')));
+
+  const mountedGroups = internalDirs.map((d) => basename(d.replace(/[\\/]+$/, '')));
   const mountedSet = new Set(mountedGroups);
 
   for (const g of mountedSet) {

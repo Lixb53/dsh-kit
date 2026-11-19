@@ -44,6 +44,24 @@ const only = (arg('--only') ?? '')
   .filter(Boolean);
 const withCritic = !argv.includes('--no-critic');
 
+/**
+ * 外部技能的「本地挂载映射」是可复现安装的最后一环，但路径因机器而异，不能入库。
+ * 默认读取根目录下 external-skills.local.yaml，也可用 --external-config 指定：
+ *   预设 id:
+ *     - 本地安装目录（该目录及其下每个含 SKILL.md 的子目录都会被暴露）
+ * 它只往渲染结果里加挂载目录，不改动 presets/*.yaml 的声明。
+ */
+const externalConfigPath = arg('--external-config') ?? join(root, 'external-skills.local.yaml');
+let externalMounts = {};
+if (existsSync(externalConfigPath)) {
+  const parsed = parseYaml(readFileSync(externalConfigPath, 'utf8'));
+  if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+    externalMounts = parsed;
+  } else {
+    console.error(`warn  外部技能挂载配置 ${externalConfigPath} 顶层应为「预设 id: 目录列表」`);
+  }
+}
+
 if (!existsSync(presetsDir)) {
   console.error(`✗ 找不到 presets/：${presetsDir}`);
   process.exit(1);
@@ -231,7 +249,12 @@ function scanSkills(baseDir) {
   return index;
 }
 
-/** 按预设引用的技能，算出需要挂载的分组目录（去重、保持声明顺序）。 */
+/**
+ * 按预设引用的技能，算出需要挂载的分组目录（去重、保持声明顺序）。
+ * 再合并 external-skills.local.yaml 里为该预设配置的本地外部技能安装目录。
+ * 合并后目录以真实路径交给 skill-filesystem，不做 basename 去重：
+ * 本地目录可能与服务内部同名分组不同，必须以完整路径为准。
+ */
 function skillDirsForPreset(preset, skillIndex, fallbackDir) {
   const refs = Array.isArray(preset.skills) ? preset.skills : [];
   const dirs = [];
@@ -240,7 +263,17 @@ function skillDirsForPreset(preset, skillIndex, fallbackDir) {
     if (!hit) continue;
     if (!dirs.includes(hit.path)) dirs.push(hit.path);
   }
-  return dirs.length > 0 ? dirs : [fallbackDir];
+  if (dirs.length === 0) dirs.push(fallbackDir);
+
+  const external = externalMounts[preset.id];
+  if (Array.isArray(external)) {
+    for (const raw of external) {
+      const d = typeof raw === 'string' ? raw.trim() : '';
+      if (!d) continue;
+      if (!dirs.includes(d)) dirs.push(d);
+    }
+  }
+  return dirs;
 }
 
 function summarizeDescription(preset) {
@@ -428,6 +461,14 @@ for (const file of files) {
   );
   for (const m of missing) {
     console.error(`warn  ${file}: 技能 "${m}" 未在 ${skillsDir} 下找到，未挂载`);
+  }
+
+  // external_skills 只是声明：没有本地挂载配置时不会进入任何 customSkillDirs。
+  const externalRefs = Array.isArray(preset.external_skills) ? preset.external_skills : [];
+  if (externalRefs.length > 0 && !Array.isArray(externalMounts[preset.id])) {
+    console.error(
+      `warn  ${file}: 声明了 ${externalRefs.length} 个 external_skills，但 ${externalConfigPath} 未为其配置本地安装目录；这些技能本次不会挂载（方案 C：清单与安装分离）`,
+    );
   }
 
   const opts = { skillsDirs, criticPresetId, version: repoVersion };

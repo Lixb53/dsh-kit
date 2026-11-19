@@ -24,10 +24,23 @@
 
 ## [Unreleased]
 
+### Added
+
+- `docs/external-skills.md`：外部技能「清单与安装分离」方案——预设声明 + catalog 版本 pin + 本机挂载配置三段式，含可复现安装与挂载步骤。
+- `external-skills.local.example.yaml`：本机挂载配置模板，复制为 `external-skills.local.yaml`（已 gitignore）填写即可。
+- `render-presets.mjs` 支持可选 `external-skills.local.yaml`（或 `--external-config`），把本机外部技能安装目录并入对应预设的 `customSkillDirs`；校验器对这些目录豁免「无关分组」检查。
+- `check-render.mjs` 透传 `--external-config`，保证被校验结果与渲染一致。
+
 ### Changed
 
 - 版本号收口到 `version.txt` 单一真源：`package.json` 交由 Release Please 的 `extra-files` 同步，`presets/*.yaml` 不再写 `version`，由渲染器注入当前仓库版本。
 - `validate-skills.mjs` 新增三项检查：`package.json` 版本必须等于 `version.txt`；`version.txt` 必须是合法 SemVer；预设文件出现 `version` 字段即失败。
+- `skill-catalog.md` 补外部包许可核验结果与版本 pin（无 release 的包用不可变 commit SHA，采集于 2026-11-19）；`frontend-design` 许可不明确，按选型原则从 `ui-design` 默认预设移除（仅手动启用）。
+
+### Fixed
+
+- `docs/presets.md` 最小示例误写 `version: 0.1.0`，照抄会被校验器拒绝；已删除该行。
+- 渲染器对「声明了 `external_skills` 但未配置本机挂载」给出 warn，避免"写了就生效"的误解。
 
 ## [0.2.0](https://github.com/Lixb53/dsh-kit/compare/v0.1.0...v0.2.0) (2026-11-19)
 

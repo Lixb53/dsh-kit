@@ -8,3 +8,5 @@ Thumbs.db
 .vscode/
 .dsh/
 coverage/
+# 外部技能的本地安装目录映射（路径因机器而异，不入库）
+external-skills.local.yaml

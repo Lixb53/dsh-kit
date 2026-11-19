@@ -11,7 +11,7 @@ external_skills:
   - ui-ux-pro-max
   - ux-ui-agent-skills
   - accessibility-agents
-  - frontend-design
+  # frontend-design 许可不明确（见 docs/skill-catalog.md），按选型原则不进默认预设；需要时手动启用。
 tools:
   - fs
   - pwsh
