@@ -1,0 +1,179 @@
+{
+  "version": 1,
+  "note": "外部技能声明：来源与版本 pin 的机器可读真源，来自 docs/skill-catalog.md。kind=auto 的技能可由 scripts/skills-manager.mjs 自动下载安装；kind=manual 的只有说明，需按 catalog 手动安装。安装到本机 .generated/external-skills/，挂载映射由 sync 生成到 gitignore 的 external-skills.local.yaml。",
+  "packages": [
+    {
+      "id": "one-line-prototype",
+      "label": "一句话需求四件套（PRD+泳道图+原型+确认单）",
+      "kind": "auto",
+      "repo": "Sunnyshinnny776/one-line-prototype",
+      "ref": "v0.2.0",
+      "license": "Apache-2.0",
+      "presets": ["product-design"],
+      "entries": [
+        { "src": "skills/one-line-prototype", "name": "one-line-prototype" }
+      ]
+    },
+    {
+      "id": "pm-skills",
+      "label": "产品技能精选（PRD/故事/验收/边界/ADR/Mermaid）",
+      "kind": "auto",
+      "repo": "product-on-purpose/pm-skills",
+      "ref": "v2.35.1",
+      "license": "Apache-2.0",
+      "presets": ["product-design"],
+      "entries": [
+        { "src": "skills/deliver-prd", "name": "deliver-prd" },
+        { "src": "skills/deliver-user-stories", "name": "deliver-user-stories" },
+        { "src": "skills/deliver-acceptance-criteria", "name": "deliver-acceptance-criteria" },
+        { "src": "skills/deliver-edge-cases", "name": "deliver-edge-cases" },
+        { "src": "skills/develop-adr", "name": "develop-adr" },
+        { "src": "skills/utility-mermaid-diagrams", "name": "utility-mermaid-diagrams" }
+      ]
+    },
+    {
+      "id": "spec-kit",
+      "label": "规格驱动 CLI（/speckit-* 工作流）",
+      "kind": "manual",
+      "repo": "github/spec-kit",
+      "ref": "v1.4.2",
+      "license": "MIT",
+      "presets": ["product-design"],
+      "note": "CLI + 命令模板，不是 SKILL.md 目录。按 docs/skill-catalog.md 用 pip/uv 安装后在项目里 specify init。"
+    },
+    {
+      "id": "ui-ux-pro-max",
+      "label": "UI 风格/配色/字体检索（80 风格/194 配色）",
+      "kind": "auto",
+      "repo": "nextlevelbuilder/ui-ux-pro-max-skill",
+      "ref": "v2.15.0",
+      "license": "MIT",
+      "presets": ["ui-design"],
+      "entries": [
+        { "src": ".claude/skills/ui-ux-pro-max", "name": "ui-ux-pro-max" },
+        { "src": ".claude/skills/design-system", "name": "design-system" }
+      ]
+    },
+    {
+      "id": "ux-ui-agent-skills",
+      "label": "DTCG 令牌/组件规格/52 门禁",
+      "kind": "auto",
+      "repo": "plugin87/ux-ui-agent-skills",
+      "ref": "v3.1.1",
+      "license": "MIT",
+      "presets": ["ui-design"],
+      "entries": [
+        { "src": ".claude/skills/design-tokens", "name": "design-tokens" },
+        { "src": ".claude/skills/design-component", "name": "design-component" },
+        { "src": ".claude/skills/design-qa", "name": "design-qa" },
+        { "src": ".claude/skills/gate", "name": "gate" },
+        { "src": ".claude/skills/critique", "name": "critique" },
+        { "src": ".claude/skills/apply-aesthetic", "name": "apply-aesthetic" }
+      ]
+    },
+    {
+      "id": "accessibility-agents",
+      "label": "WCAG 2.2 AA 审计技能",
+      "kind": "auto",
+      "repo": "Community-Access/accessibility-agents",
+      "ref": "v7.1.0",
+      "license": "MIT",
+      "presets": ["ui-design"],
+      "entries": [
+        { "src": "skills/a11y-core", "name": "a11y-core" },
+        { "src": "skills/accessibility-lead", "name": "accessibility-lead" },
+        { "src": "skills/contrast-master", "name": "contrast-master" }
+      ]
+    },
+    {
+      "id": "frontend-design",
+      "label": "反模板化审美方向（许可不明确，仅手动评估）",
+      "kind": "manual",
+      "repo": "anthropics/skills",
+      "ref": "e4bb5d960d87126ff3b3a8af1a104b7db67560ba",
+      "license": "unclear",
+      "presets": [],
+      "note": "许可未核实，按选型原则不进默认预设。需要时手动取用。"
+    },
+    {
+      "id": "vercel-agent-skills",
+      "label": "React/Next 性能规则 + 组合模式 + UI 审查",
+      "kind": "auto",
+      "repo": "vercel-labs/agent-skills",
+      "ref": "agent-skills-1a2c79d4e6c4a2283dc2c614b6538cbe1ed5ca62",
+      "license": "MIT (README 自述，仓库无 LICENSE)",
+      "presets": ["frontend-dev"],
+      "entries": [
+        { "src": "skills/react-best-practices", "name": "vercel-react-best-practices" },
+        { "src": "skills/composition-patterns", "name": "composition-patterns" },
+        { "src": "skills/web-design-guidelines", "name": "web-design-guidelines" }
+      ]
+    },
+    {
+      "id": "code-review-skill",
+      "label": "多语言代码审查（含 Vue/CSS）",
+      "kind": "auto",
+      "repo": "awesome-skills/code-review-skill",
+      "ref": "4850184dfd7765ea7b3c5c4e9b6cf8e0815ee7cb",
+      "license": "MIT",
+      "presets": ["frontend-dev"],
+      "entries": [
+        { "src": ".", "name": "code-review-skill" }
+      ]
+    },
+    {
+      "id": "web-quality-skills",
+      "label": "Lighthouse/CWV/性能测量",
+      "kind": "auto",
+      "repo": "addyosmani/web-quality-skills",
+      "ref": "afa8da942115f2961fdbfa80807ea0b232ff6c00",
+      "license": "MIT",
+      "presets": ["frontend-dev"],
+      "entries": [
+        { "src": "skills/core-web-vitals", "name": "core-web-vitals" },
+        { "src": "skills/performance", "name": "performance" },
+        { "src": "skills/web-quality-audit", "name": "web-quality-audit" }
+      ]
+    },
+    {
+      "id": "playwright-skills",
+      "label": "Playwright 测试技能（CLI 分发）",
+      "kind": "manual",
+      "repo": "microsoft/playwright",
+      "ref": "随 playwright-cli 版本",
+      "license": "未核实",
+      "presets": ["frontend-dev"],
+      "note": "由 playwright-cli 分发，按 catalog 执行 playwright-cli install --skills。"
+    },
+    {
+      "id": "backendpro",
+      "label": "731 条带来源规则 + ADR/decide + MCP",
+      "kind": "manual",
+      "repo": "shashankswe2020-ux/backend-pro-max-skill",
+      "ref": "v0.9.0",
+      "license": "MIT",
+      "presets": ["backend-dev"],
+      "note": "Python CLI/MCP，非 SKILL.md 目录；按 catalog 下 release whl 并用 SHA256SUMS 校验。"
+    },
+    {
+      "id": "postgres-mcp",
+      "label": "schema/执行计划/索引建议",
+      "kind": "manual",
+      "repo": "crystaldba/postgres-mcp",
+      "ref": "v0.3.0",
+      "license": "MIT",
+      "presets": ["backend-dev"],
+      "note": "MCP server；在 DSH 的 MCP 管理器里配置，凭证写入 credentials。"
+    },
+    {
+      "id": "dsh-notes-board",
+      "label": "ADR 决策记录进 git（DSH 插件）",
+      "kind": "manual",
+      "repo": "scccy/dsh-notes-board",
+      "ref": "3066ce367b42261b9036b193d9349a25520e57b7",
+      "license": "MIT",
+      "presets": ["backend-dev"],
+      "note": "DSH 插件，用 plugin_manager / GUI 安装，不是技能目录。"
+    }
+  ]
+}

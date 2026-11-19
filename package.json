@@ -8,6 +8,7 @@
     "validate": "node scripts/validate-skills.mjs",
     "render": "node scripts/render-presets.mjs",
     "install:presets": "node scripts/install-presets.mjs",
+    "skills": "node scripts/skills-manager.mjs",
     "check:render": "node scripts/check-render.mjs",
     "test": "node scripts/validate-skills.mjs && node scripts/check-render.mjs"
   },

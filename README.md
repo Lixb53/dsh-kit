@@ -24,6 +24,7 @@ docs/                            # 协作模型、字段说明、选型、排版
 
 | 目录 | 内容 | 规则 |
 |---|---|---|
+| `skills-manifest.json` | 外部技能的机器可读清单（来源 + 版本 pin） | `npm run skills` 的真源，来自 `docs/skill-catalog.md` |
 | `skills/<group>/<name>/SKILL.md` | 技能（Agent Skills 规范，YAML frontmatter + Markdown 正文） | 两级目录：`<group>` 是隔离单元，`<name>` 必须与 frontmatter 的 `name` 一致，lowercase kebab-case |
 | `presets/<name>.yaml` | 预设：职责、引用哪些技能、工具/MCP、评审维度、交付物 | `id` 与文件名一致；只引用技能名，不复制技能正文 |
 | `scripts/validate-skills.mjs` | 零依赖校验器 | 必须通过才能合并 |
@@ -70,6 +71,8 @@ npm test
 ---
 
 ## 快速开始
+
+外部技能的安装与增删改见 [`docs/skills-manager.md`](docs/skills-manager.md)（`npm run skills -- install/sync/update/remove`）。
 
 ### 1. 克隆
 

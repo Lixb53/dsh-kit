@@ -38,6 +38,9 @@
 
 ### Added
 
+- `scripts/skills-manager.mjs` + `skills-manifest.json` + `npm run skills`：按 `docs/skill-catalog.md` 的 pin 一键安装/更新/删除外部技能，支持 `list/install/update/remove/sync/status/doctor`。下载用 `git fetch` 固定 tag/commit，跨平台；按预设平铺到独立挂载根，保持角色隔离。`sync` 生成 gitignore 的 `external-skills.local.yaml`。
+- `docs/skills-manager.md`：外部技能安装与维护指南；README / usage-guide 增补入口。
+
 - `scripts/install-presets.mjs` + `npm run install:presets`：在目标机器上把预设渲染成可迁移、可卸载的本地 bundle（`@local/dsh-role-presets`）；仓库不再保存任何机器专属绝对路径。换机器 / 换 OS 后 clone → `npm ci` → `npm run install:presets` → 重新安装即可。
 - `render-presets.mjs` 暴露 `renderPresets()` / `REPO_ROOT` 供其他脚本直接导入；`check-render.mjs` 改为直接调用，避免子进程 `spawn EPERM`。
 

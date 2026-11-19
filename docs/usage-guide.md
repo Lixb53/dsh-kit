@@ -145,6 +145,21 @@ Select-String -Path G:\dsh-kit\.generated\dsh-role-presets\cordis.patch.yml -Pat
 
 ---
 
+## 1b.（推荐）用脚本一键安装外部技能
+
+外部技能（各角色的知识包）可以不用手动配，交给脚本：
+
+```powershell
+cd G:\dsh-kit
+npm run skills -- install     # 按 skills-manifest.json 的 pin 下载全部可自动安装的包
+npm run skills -- sync        # 生成按角色隔离的挂载映射 external-skills.local.yaml
+npm run install:presets       # 重新渲染 bundle（会带上外部技能）
+```
+
+维护命令：`npm run skills -- list`（看清单与状态）、`update`（重装到 pin 版本）、`remove <id>`（删除）、`status`、`doctor`（自检）。增删改只需改 `skills-manifest.json` 再 `install/update` + `sync` + `install:presets`。完整说明见 [`docs/skills-manager.md`](skills-manager.md)。
+
+> 脚本生成的 `external-skills.local.yaml` 会覆盖第 1.3 步的手工配置——两者二选一，推荐用脚本。少数 `manual` 包（spec-kit / backendpro / postgres-mcp 等 CLI/MCP/插件）仍需按 catalog 手动安装。
+
 ## 2. 日常使用
 
 ### 2.1 选哪个预设
