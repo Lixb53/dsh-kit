@@ -36,9 +36,17 @@ deliverables:
   - out/<feature>/
 ```
 
-## 转成 DSH 预设
+## 渲染成 DSH 配置
 
-DSH 的预设是 `cordis.patch.yml` 里的 `@deepseek-ai/dsh-agent-preset` 行。最小转译方式：
+不需要手写 `cordis.patch.yml`：
+
+```bash
+node scripts/render-presets.mjs --out cordis.patch.yml
+```
+
+脚本会为每个预设生成一条 `@deepseek-ai/dsh-agent-preset` 插入项，并把 `critic.enabled: true` 的预设渲染成两条：主预设 + `<id>-critic` 只读评审预设（`tool-fs` 关掉 write/edit，不挂 shell）。生成结果的结构由 `scripts/check-render.mjs` 校验。
+
+手写时的等价形态如下，供对照：
 
 ```yaml
 - insert:
@@ -82,4 +90,11 @@ DSH 的预设是 `cordis.patch.yml` 里的 `@deepseek-ai/dsh-agent-preset` 行�
 
 ## 校验
 
-`node scripts/validate-skills.mjs` 会检查：`id` 与文件名一致、`skills` 引用的技能存在、`deliverables` 非空、`persona` 非空。CI 用同一脚本。
+```bash
+npm test
+```
+
+- `scripts/validate-skills.mjs`（零依赖）：`id` 与文件名一致、`skills` 引用的技能存在、`deliverables` 非空、`persona` 非空、CHANGELOG 与版本文件一致。
+- `scripts/check-render.mjs`（需 js-yaml）：渲染结果是合法 YAML、每个预设都挂 `persona` / `skill-filesystem` / `tool-skill`、评审预设只读且无 shell、`critic` 引用的预设存在。
+
+CI 用同一套脚本。

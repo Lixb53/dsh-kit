@@ -10,8 +10,11 @@
 
 - 首批四个角色技能：`product-design`、`ui-design`、`frontend-dev`、`backend-dev`。
 - 首批四个角色预设：`presets/*.yaml`，只引用技能名，不内联技能内容。
-- 零依赖校验器 `scripts/validate-skills.mjs`：校验 SKILL.md frontmatter、技能名与目录一致性、预设引用完整性、CHANGELOG 结构。
-- CI：push / PR 到 `main` 时执行校验。
+- 预设 → DSH 配置的渲染器 `scripts/render-presets.mjs`：自动生成主预设与配套只读评审预设。
+- 渲染结果校验器 `scripts/check-render.mjs`：YAML 合法性、必需插件、评审预设只读约束、critic 引用有效性。
+- 零依赖校验器 `scripts/validate-skills.mjs`：校验 SKILL.md frontmatter、技能名与目录一致性、预设引用完整性、CHANGELOG 结构、版本一致性。
+- `package.json`：`npm run validate` / `npm run render` / `npm run check:render` / `npm test`。
+- CI：push / PR 到 `main` 时执行校验与渲染检查。
 - Release Please 配置与发版工作流。
 - Issue / PR 模板、`CONTRIBUTING.md`、`AGENTS.md`、`docs/`。
 

@@ -1,5 +1,5 @@
 name: 新增技能 / 预设
-description: 提议一个新的角色技能或预设，或对现有技能做结构性扩展
+description: 提议一个新的技能或预设，或对现有技能/预设做结构性扩展
 title: "[skill] "
 labels: ["enhancement"]
 body:
@@ -36,8 +36,9 @@ body:
   - type: input
     id: role
     attributes:
-      label: 目标角色
-      description: 产品设计 / UI 设计 / 前端开发 / 后端开发 / 跨角色
+      label: 归属
+      description: 现有预设计名，或写「新预设」
+      placeholder: product-design / 新预设
     validations:
       required: true
 

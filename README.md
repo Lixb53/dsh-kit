@@ -79,7 +79,15 @@ cd dsh-kit
 ## 校验
 
 ```bash
-node scripts/validate-skills.mjs
+npm ci
+npm test          # = validate + check-render
+```
+
+也可以分开跑：
+
+```bash
+node scripts/validate-skills.mjs   # 零依赖：frontmatter / 命名 / 引用 / CHANGELOG / 版本
+node scripts/check-render.mjs      # 需 js-yaml：渲染结果的 YAML 合法性与只读评审约束
 ```
 
 校验内容：
@@ -89,9 +97,25 @@ node scripts/validate-skills.mjs
 - `description` 非空且不超过 1024 字符；
 - 每个 `presets/*.yaml` 的 `id` 与文件名一致，`skills:` 引用的技能全部存在；
 - `CHANGELOG.md` 含 `## [Unreleased]`；
-- `version.txt` 与 `.release-please-manifest.json` 的版本一致。
+- `version.txt` 与 `.release-please-manifest.json` 的版本一致；
+- 渲染出的 `cordis.patch.yml` 片段是合法 YAML，每个预设都挂了 `persona` / `skill-filesystem` / `tool-skill`，评审预设的 `tool-fs` 必须只读且不挂 shell。
 
-CI 在 push / PR 到 `main` 时执行同一脚本，失败即阻止合并。
+CI 在 push / PR 到 `main` 时执行同一套检查，失败即阻止合并。
+
+---
+
+## 渲染成 DSH 配置
+
+`presets/*.yaml` 是声明式清单，用脚本渲染成 DSH 可直接加载的 `cordis.patch.yml` 片段：
+
+```bash
+node scripts/render-presets.mjs --out cordis.patch.yml
+node scripts/render-presets.mjs --only product-design,ui-design   # 只渲染部分
+node scripts/render-presets.mjs --no-critic                       # 不生成评审预设
+node scripts/render-presets.mjs --skills-dir /abs/path/to/skills  # 指定技能目录
+```
+
+每个 `critic.enabled: true` 的预设会自动生成一个对应的 `<id>-critic` 只读评审预设，并接好 `critic` 子代理工具。
 
 ---
 

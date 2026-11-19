@@ -14,10 +14,12 @@ dsh-kit/
 │   └── <name>/
 │       └── SKILL.md          # 必须，唯一真源
 ├── presets/
-│   └── <name>.yaml           # 角色预设，只引用技能名
+│   └── <name>.yaml           # 预设，只引用技能名
 ├── docs/
 ├── scripts/
-│   └── validate-skills.mjs
+│   ├── validate-skills.mjs   # 零依赖校验
+│   ├── render-presets.mjs    # 预设 → cordis.patch.yml
+│   └── check-render.mjs      # 渲染结果校验
 ├── .github/
 │   ├── workflows/
 │   └── ISSUE_TEMPLATE/
@@ -116,9 +118,18 @@ PR 描述就三行：**改了什么、对应 Issue、是否已更新 CHANGELOG/�
 - `name` 为 lowercase kebab-case 且与目录名一致；
 - `description` 长度 1–1024；
 - `presets/*.yaml` 的 `id` 与文件名一致，`skills:` 引用的技能全部存在；
-- `CHANGELOG.md` 含 `## [Unreleased]`。
+- `CHANGELOG.md` 含 `## [Unreleased]`；
+- `version.txt` 与 `.release-please-manifest.json` 一致。
 
-CI 在 `push` 和 `pull_request` 到 `main` 时执行，失败则阻止合并。
+`scripts/check-render.mjs`（需 `js-yaml`）检查渲染结果：
+
+- 输出是合法 YAML，顶层为 `- insert:` 列表；
+- 每个预设都挂 `persona` / `skill-filesystem` / `tool-skill`，且 `customSkillDirs` 非空；
+- 评审预设（`<id>-critic`）的 `tool-fs` 必须 `write:false` / `edit:false`，且不挂 shell；
+- `critic` 插件引用的预设存在；
+- 渲染出的预设与 `presets/*.yaml` 一一对应。
+
+本地一把跑完：`npm test`。CI 在 `push` 和 `pull_request` 到 `main` 时执行同一套检查，失败则阻止合并。
 
 ---
 

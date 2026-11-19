@@ -20,6 +20,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
 
-      - name: Validate skills, presets and changelog
+      - name: Install
+        run: npm ci
+
+      - name: Validate skills and presets
         run: node scripts/validate-skills.mjs
+
+      - name: Check preset rendering
+        run: node scripts/check-render.mjs

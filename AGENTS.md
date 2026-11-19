@@ -35,5 +35,6 @@
 
 ## 合并前
 
-- 运行 `node scripts/validate-skills.mjs`，必须 0 错误。
+- 运行 `npm test`（= `validate-skills.mjs` + `check-render.mjs`），必须 0 错误。
 - 改了技能或预设，必须同步 `CHANGELOG.md` 的 `## [Unreleased]`。
+- 改了 `presets/*.yaml` 的结构（新增字段或改渲染语义），必须同步 `scripts/render-presets.mjs` 与 `docs/presets.md`。
