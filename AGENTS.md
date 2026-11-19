@@ -30,16 +30,22 @@
 - 不得在预设中复制技能内容；只允许引用。
 - 挂载目录由渲染器按 `skills:` 自动算出，不要手写 `customSkillDirs`。
 
+## 版本
+
+- 版本号只有 `version.txt` 一个真源；不要手改，也不要在别处另写版本。
+- `.release-please-manifest.json` 与 `package.json` 的 `version` 由 Release Please 同步。
+- `presets/*.yaml` **不写 `version`**：渲染时从 `version.txt` 注入；写了会校验失败。
+
 ## 提交
 
 - 使用 Conventional Commits：`feat` / `fix` / `docs` / `refactor` / `chore`。
-- 破坏性变更用 `feat!:` 或 `fix!:`；移动技能分组属于破坏性变更。
+- 破坏性变更用 `feat!:` 或 `fix!:`（正确写法：`feat(scope)!: 描述`，不是 `feat!(scope):`，后者 Release Please 解析失败）。
 - 一个 commit 只做一件事；不要混「新增技能」与「改 README」。
 
 ## 发版
 
 - 不手动改版本号，不发手动 tag。
-- 保证 commit 类型正确，Release Please 会生成 Release PR。
+- 保证 commit 类型正确，Release Please 会生成 Release PR，并同步 `version.txt` / manifest / `package.json`。
 
 ## 合并前
 

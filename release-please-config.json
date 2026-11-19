@@ -6,7 +6,14 @@
     ".": {
       "package-name": "dsh-kit",
       "version-file": "version.txt",
-      "changelog-path": "CHANGELOG.md"
+      "changelog-path": "CHANGELOG.md",
+      "extra-files": [
+        {
+          "type": "json",
+          "path": "package.json",
+          "jsonpath": "$.version"
+        }
+      ]
     }
   }
 }

@@ -19,11 +19,8 @@
 
 ### Changed
 
-- 技能改为分组布局 `skills/<group>/<name>/SKILL.md`；预设只挂载自己引用的技能所在分组，预设之间不再共享技能。挂载路径发生变化，属于破坏性变更。
-
-### Added
-
-- `check-render.mjs` 新增技能隔离检查：挂载无关分组或漏挂引用技能所在分组都会失败。
+- 版本号收口到 `version.txt` 单一真源：`package.json` 交由 Release Please 的 `extra-files` 同步，`presets/*.yaml` 不再写 `version`，由渲染器注入当前仓库版本。
+- `validate-skills.mjs` 新增三项检查：`package.json` 版本必须等于 `version.txt`；`version.txt` 必须是合法 SemVer；预设文件出现 `version` 字段即失败。
 
 ## [0.2.0](https://github.com/Lixb53/dsh-kit/compare/v0.1.0...v0.2.0) (2026-11-19)
 

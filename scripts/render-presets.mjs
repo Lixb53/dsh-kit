@@ -49,6 +49,23 @@ if (!existsSync(presetsDir)) {
   process.exit(1);
 }
 
+/**
+ * 仓库版本只认 version.txt（Release Please 维护）。
+ * 预设文件不写 version，渲染时统一注入，避免多处漂移。
+ */
+function readRepoVersion() {
+  const versionPath = join(root, 'version.txt');
+  if (!existsSync(versionPath)) return null;
+  const version = readFileSync(versionPath, 'utf8').trim();
+  return /^\d+\.\d+\.\d+/.test(version) ? version : null;
+}
+
+const repoVersion = readRepoVersion();
+if (!repoVersion) {
+  console.error(`✗ 无法从 ${join(root, 'version.txt')} 读取版本号`);
+  process.exit(1);
+}
+
 // ---------------------------------------------------------------------------
 // YAML 子集解析
 // ---------------------------------------------------------------------------
@@ -238,7 +255,7 @@ function summarizeDescription(preset) {
 }
 
 function renderPreset(preset, opts) {
-  const { skillsDirs, criticPresetId } = opts;
+  const { skillsDirs, criticPresetId, version } = opts;
   const lines = [];
 
   lines.push(`    - id: preset-${preset.id}`);
@@ -247,7 +264,7 @@ function renderPreset(preset, opts) {
   lines.push(`        id: ${preset.id}`);
   lines.push(`        name: ${q(preset.name)}`);
   lines.push(`        description: ${q(summarizeDescription(preset))}`);
-  if (preset.version) lines.push(`        version: ${q(preset.version)}`);
+  if (version) lines.push(`        version: ${q(version)}`);
   lines.push(`        plugins:`);
 
   // persona
@@ -413,7 +430,7 @@ for (const file of files) {
     console.error(`warn  ${file}: 技能 "${m}" 未在 ${skillsDir} 下找到，未挂载`);
   }
 
-  const opts = { skillsDirs, criticPresetId };
+  const opts = { skillsDirs, criticPresetId, version: repoVersion };
 
   const parts = [renderPreset(preset, opts)];
   if (withCritic && preset.critic && preset.critic.enabled) {
@@ -425,7 +442,7 @@ for (const file of files) {
 const header = [
   `# 由 scripts/render-presets.mjs 生成；改动请改 presets/*.yaml 后重新生成。`,
   `# 挂载方式：把本文件内容并入 profile 的 cordis.patch.yml，或作为 --patch 覆盖层。`,
-  `# 生成参数：skills=${skillsDir}${withCritic ? '' : '  critic=off'}`,
+  `# 生成参数：version=${repoVersion}  skills=${skillsDir}${withCritic ? '' : '  critic=off'}`,
   `# 每个预设只挂载它引用的技能所在的分组目录，预设之间不共享技能。`,
   ``,
   `- insert:`,

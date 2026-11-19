@@ -231,18 +231,62 @@ if (!existsSync(changelogPath)) {
 // ---------------------------------------------------------------------------
 // 7. 版本一致性
 // ---------------------------------------------------------------------------
+//
+// 版本号只有一个真源：version.txt（由 Release Please 维护）。
+// .release-please-manifest.json 和 package.json 必须与它一致；
+// presets/*.yaml 不写 version，由渲染器从 version.txt 注入。
 
 const versionPath = join(root, 'version.txt');
 const manifestPath = join(root, '.release-please-manifest.json');
-if (existsSync(versionPath) && existsSync(manifestPath)) {
-  try {
-    const version = readText(versionPath).trim();
-    const manifest = JSON.parse(readText(manifestPath));
-    if (manifest['.'] !== version) {
-      err(`version.txt (${version}) 与 .release-please-manifest.json (${manifest['.']}) 不一致`);
+const packagePath = join(root, 'package.json');
+
+let repoVersion = null;
+if (!existsSync(versionPath)) {
+  err('缺少 version.txt');
+} else {
+  repoVersion = readText(versionPath).trim();
+  if (!/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(repoVersion)) {
+    err(`version.txt 不是合法 SemVer：${repoVersion}`);
+  }
+}
+
+if (repoVersion) {
+  if (!existsSync(manifestPath)) {
+    err('缺少 .release-please-manifest.json');
+  } else {
+    try {
+      const manifest = JSON.parse(readText(manifestPath));
+      if (manifest['.'] !== repoVersion) {
+        err(
+          `.release-please-manifest.json (${manifest['.']}) 与 version.txt (${repoVersion}) 不一致`,
+        );
+      }
+    } catch (e) {
+      err(`.release-please-manifest.json 解析失败: ${e.message}`);
     }
-  } catch (e) {
-    err(`版本文件解析失败: ${e.message}`);
+  }
+
+  if (!existsSync(packagePath)) {
+    err('缺少 package.json');
+  } else {
+    try {
+      const pkg = JSON.parse(readText(packagePath));
+      if (pkg.version !== repoVersion) {
+        err(`package.json version (${pkg.version}) 与 version.txt (${repoVersion}) 不一致`);
+      }
+    } catch (e) {
+      err(`package.json 解析失败: ${e.message}`);
+    }
+  }
+}
+
+// 预设不得自带 version，避免与仓库版本漂移
+if (isDir(presetsDir)) {
+  for (const file of readdirSync(presetsDir).filter((n) => /\.ya?ml$/.test(n))) {
+    const text = readText(join(presetsDir, file));
+    if (/^version:/m.test(text)) {
+      err(`presets/${file}: 不要写 version 字段，渲染时会从 version.txt 注入`);
+    }
   }
 }
 

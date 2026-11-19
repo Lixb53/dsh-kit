@@ -77,6 +77,8 @@ description: 一句话说明「什么时候用、解决什么问题」，不超�
 | `chore:` | CI、模板、gitignore 等维护 | 不触发 |
 | `feat!:` / `fix!:` | 破坏性变更（改名、删除技能、**移动技能分组**、改预设契约） | **major** |
 
+> 破坏性标记写在**类型后的括号之后**：`feat(skills)!: 描述`。写成 `feat!(skills):` 会让 Release Please 解析失败并跳过该提交。
+
 **原子性**：一个 commit 只做一件事。不要混「新增技能」和「改 README」。
 
 示例：
@@ -144,8 +146,21 @@ PR 描述就三行：**改了什么、对应 Issue、是否已更新 CHANGELOG/�
 版本管理的目标是**让使用者能锁定一个 tag，知道哪些技能和预设是兼容的**。
 
 1. Release Please 解析 Conventional Commits，自动判断下一个版本号（`feat` → minor，`fix` → patch，`!` → major）。
-2. 它维护一个 **Release PR**，自动更新 `CHANGELOG.md` 和 `version.txt`。
+2. 它维护一个 **Release PR**，自动更新 `version.txt`、`.release-please-manifest.json`、`package.json` 与 `CHANGELOG.md`。
 3. 你只需要在准备好发版时**合并这个 PR**，它就打 tag、创建 GitHub Release。
+
+### 版本号从哪来
+
+**唯一真源是 `version.txt`。** 其余位置都由工具同步或由脚本注入：
+
+| 文件 | 谁写 | 校验 |
+|---|---|---|
+| `version.txt` | Release Please | 真源，必须是合法 SemVer |
+| `.release-please-manifest.json` | Release Please | 必须等于 `version.txt` |
+| `package.json` 的 `version` | Release Please（`release-please-config.json` 的 `extra-files`） | 必须等于 `version.txt` |
+| `presets/*.yaml` | **不写** | 出现 `version` 字段即校验失败，渲染时从 `version.txt` 注入 |
+
+所以新增预设时不要在 YAML 里写 `version`；渲染出的 `cordis.patch.yml` 里每个预设条目的 `config.version` 都会是当前仓库版本。
 
 ### 语义化版本在配置资源仓库里的含义
 
@@ -153,7 +168,7 @@ PR 描述就三行：**改了什么、对应 Issue、是否已更新 CHANGELOG/�
 |---|---|---|
 | **patch** | 修正技能步骤、文档错字、预设引用路径 | 直接拉最新 |
 | **minor** | 新增技能/预设、给预设增加可选能力 | 检查 CHANGELOG 后决定是否启用 |
-| **major** | 删除/重命名技能、修改预设引用契约、改 frontmatter 必填字段 | 必须读迁移说明，按新版调整本地配置 |
+| **major** | 删除/重命名技能、移动技能分组、修改预设引用契约、改 frontmatter 必填字段 | 必须读迁移说明，按新版调整本地配置 |
 
 **关键原则**：预设里引用的技能**不写版本号**，只写技能名，由仓库 tag 整体决定兼容集。使用者拉 `v1.3.0`，该 tag 下的全部预设和它们引用的所有技能就是经过 CI 校验的同一组快照。某个技能需要破坏性变更时发 major tag，预设同步更新；使用者要么整体升级，要么停在旧 tag，不会出现「预设是新的、技能是旧的」的半坏状态。
 

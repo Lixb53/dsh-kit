@@ -10,7 +10,6 @@
 |---|---|---|
 | `id` | 是 | 必须与文件名一致，lowercase kebab-case |
 | `name` | 是 | 展示名 |
-| `version` | 否 | 预设自身版本，与仓库 tag 同步维护 |
 | `description` | 建议 | 一行说明；渲染成 DSH 预设的 `description`，缺省时从 `persona` 截取 |
 | `persona` | 是 | 角色人格与边界，写「做什么、不做什么、依据从哪来」 |
 | `skills` | 是 | 引用本仓库 `skills/<group>/<name>/` 下的技能名，不得内联正文；同时决定挂载哪些分组 |
@@ -20,6 +19,19 @@
 | `critic` | 否 | 只读评审子代理：`enabled`、`mode: read-only`、`rubric` 维度 |
 | `deliverables` | 是 | 产物路径清单，用 `<feature>` / `<service>` 占位 |
 | `handoff` | 否 | `to`（下游预设）与 `artifact`（交接物） |
+
+> **不要写 `version`**。仓库版本只认 `version.txt`，渲染时统一注入到每个预设条目的 `config.version`；预设文件里出现 `version` 会校验失败。
+
+### 版本从哪来
+
+| 文件 | 谁维护 | 说明 |
+|---|---|---|
+| `version.txt` | Release Please | **唯一真源**，发版时自动递增 |
+| `.release-please-manifest.json` | Release Please | 与 `version.txt` 同步 |
+| `package.json` | Release Please（`extra-files`） | 与 `version.txt` 同步 |
+| `presets/*.yaml` | 不写 | 渲染时从 `version.txt` 注入 |
+
+`npm test` 会校验前三者一致、且预设里没有 `version`。
 
 ## 最小示例
 
@@ -112,7 +124,7 @@ customSkillDirs:
 npm test
 ```
 
-- `scripts/validate-skills.mjs`（零依赖）：技能两级布局、`id` 与文件名一致、`skills` 引用的技能存在、`deliverables` 非空、`persona` 非空、CHANGELOG 与版本文件一致。
+- `scripts/validate-skills.mjs`（零依赖）：技能两级布局、`id` 与文件名一致、`skills` 引用的技能存在、`deliverables` 非空、`persona` 非空、`version.txt` / manifest / `package.json` 三者版本一致、预设未自带 `version`、CHANGELOG 结构。
 - `scripts/check-render.mjs`（需 js-yaml）：渲染结果是合法 YAML、每个预设都挂 `persona` / `skill-filesystem` / `tool-skill`、**技能隔离成立**、评审预设只读且无 shell、`critic` 引用的预设存在。
 
 CI 用同一套脚本。

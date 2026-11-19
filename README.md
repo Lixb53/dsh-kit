@@ -143,9 +143,12 @@ CI 在 push / PR 到 `main` 时执行同一套检查，失败即阻止合并。
 
 ## 版本与发版
 
+**版本号只有一个真源：`version.txt`**，由 Release Please 维护。
+
 - 提交遵循 **Conventional Commits 1.0**：`feat` / `fix` / `docs` / `refactor` / `chore`，破坏性变更用 `feat!:` 或 `fix!:`。
-- 发版交给 **Release Please**：它解析提交、维护 Release PR、更新 `CHANGELOG.md` 与 `version.txt`，合并该 PR 即打 tag。
+- Release Please 解析提交、维护 Release PR、同步 `version.txt`、`.release-please-manifest.json`、`package.json` 与 `CHANGELOG.md`，合并该 PR 即打 tag。
 - 不要手改版本号。
+- `presets/*.yaml` **不写** `version`：渲染时从 `version.txt` 注入，避免多处漂移。
 
 | 版本 | 触发 | 使用者动作 |
 |---|---|---|
@@ -154,6 +157,15 @@ CI 在 push / PR 到 `main` 时执行同一套检查，失败即阻止合并。
 | major | 删除/重命名技能、移动技能分组、修改预设引用契约、改 frontmatter 必填字段 | 必须读迁移说明 |
 
 > 调整技能所在分组会改变挂载路径，属于 major 变更。
+
+### 版本一致性
+
+| 文件 | 谁写 | 校验 |
+|---|---|---|
+| `version.txt` | Release Please | 真源，必须是合法 SemVer |
+| `.release-please-manifest.json` | Release Please | 必须等于 `version.txt` |
+| `package.json` 的 `version` | Release Please（`extra-files`） | 必须等于 `version.txt` |
+| `presets/*.yaml` | 不写 | 出现 `version` 即校验失败 |
 
 ---
 
