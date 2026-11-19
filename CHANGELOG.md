@@ -6,7 +6,13 @@
 
 ## [Unreleased]
 
-暂无未发布变更。
+### Changed
+
+- 技能改为分组布局 `skills/<group>/<name>/SKILL.md`；预设只挂载自己引用的技能所在分组，预设之间不再共享技能。挂载路径发生变化，属于破坏性变更。
+
+### Added
+
+- `check-render.mjs` 新增技能隔离检查：挂载无关分组或漏挂引用技能所在分组都会失败。
 
 ## [0.2.0](https://github.com/Lixb53/dsh-kit/compare/v0.1.0...v0.2.0) (2026-11-19)
 

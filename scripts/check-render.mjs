@@ -8,12 +8,13 @@
  *  3. 每个预设都挂了 persona、skill-filesystem、tool-skill
  *  4. 声明了 critic.enabled 的预设，对应 critic 预设存在，且 tool-fs 为只读
  *  5. critic 预设的 id 唯一，且以 `-critic` 结尾
- *  6. 预设 id 与 presets/*.yaml 文件一一对应
+ *  6. 技能隔离：预设只挂载它引用的技能所在分组，不挂无关分组
+ *  7. 预设 id 与 presets/*.yaml 文件一一对应
  *
  * 用法：node scripts/check-render.mjs
  */
 
-import { readFileSync, readdirSync, existsSync } from 'node:fs';
+import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs';
 import { join, basename } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { createRequire } from 'node:module';
@@ -31,6 +32,23 @@ try {
 
 const errors = [];
 const err = (m) => errors.push(m);
+
+const presetsDir = join(root, 'presets');
+
+/** 从 YAML 文本里取某个顶层 key 的列表项。 */
+function parseYamlList(text, key) {
+  const lines = text.split(/\r?\n/);
+  const start = lines.findIndex((l) => new RegExp(`^${key}:\\s*$`).test(l));
+  if (start === -1) return null;
+  const items = [];
+  for (let i = start + 1; i < lines.length; i += 1) {
+    const line = lines[i];
+    if (/^\S/.test(line)) break;
+    const m = line.match(/^\s*-\s+(.+?)\s*$/);
+    if (m) items.push(m[1].replace(/^["']|["']$/g, ''));
+  }
+  return items;
+}
 
 // 1. 渲染
 let rendered;
@@ -140,8 +158,59 @@ for (const [id, entry] of byId) {
   }
 }
 
+// 5b. 技能隔离：预设挂载的分组必须恰好覆盖它引用的技能所在分组
+const skillsRoot = join(root, 'skills');
+const groupSkills = new Map(); // group -> Set(skillName)
+if (existsSync(skillsRoot)) {
+  for (const group of readdirSync(skillsRoot)) {
+    const groupPath = join(skillsRoot, group);
+    if (!statSync(groupPath).isDirectory() || group.startsWith('.')) continue;
+    const names = new Set();
+    for (const name of readdirSync(groupPath)) {
+      const skillDir = join(groupPath, name);
+      if (!statSync(skillDir).isDirectory() || name.startsWith('.')) continue;
+      if (existsSync(join(skillDir, 'SKILL.md'))) names.add(name);
+    }
+    if (names.size > 0) groupSkills.set(group, names);
+  }
+}
+
+for (const file of readdirSync(presetsDir).filter((n) => /\.ya?ml$/.test(n))) {
+  const id = basename(file).replace(/\.(ya?ml)$/, '');
+  const entry = byId.get(`preset-${id}`);
+  if (!entry) continue;
+
+  const text = readFileSync(join(presetsDir, file), 'utf8');
+  const refs = parseYamlList(text, 'skills') ?? [];
+  const expectedGroups = new Set();
+  for (const ref of refs) {
+    for (const [group, names] of groupSkills) {
+      if (names.has(ref)) expectedGroups.add(group);
+    }
+  }
+
+  const dirs = entry.config.plugins.find((p) => p.id === 'skill-filesystem')?.config
+    ?.customSkillDirs;
+  if (!Array.isArray(dirs)) continue;
+
+  const mountedGroups = dirs.map((d) => basename(d.replace(/[\\/]+$/, '')));
+  const mountedSet = new Set(mountedGroups);
+
+  for (const g of mountedSet) {
+    if (!expectedGroups.has(g)) {
+      err(
+        `${id}: 挂载了与预设无关的技能分组 "${g}"（该预设只引用 ${refs.join(', ') || '无'}）`,
+      );
+    }
+  }
+  for (const g of expectedGroups) {
+    if (!mountedSet.has(g)) {
+      err(`${id}: 引用的技能在分组 "${g}"，但未挂载该分组`);
+    }
+  }
+}
+
 // 6. 与 presets/ 文件对齐
-const presetsDir = join(root, 'presets');
 const files = existsSync(presetsDir)
   ? readdirSync(presetsDir)
       .filter((n) => /\.ya?ml$/.test(n))

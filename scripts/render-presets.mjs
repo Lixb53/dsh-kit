@@ -21,7 +21,7 @@
  *   node scripts/render-presets.mjs --only product-design,ui-design
  */
 
-import { readFileSync, readdirSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, readdirSync, writeFileSync, existsSync, statSync } from 'node:fs';
 import { join, basename } from 'node:path';
 
 // ---------------------------------------------------------------------------
@@ -179,6 +179,51 @@ function indentBlock(text, spaces) {
 
 function renderSkillDirs(dirs) {
   return dirs.map((d) => `                - ${q(d)}`).join('\n');
+}
+
+/**
+ * 扫描 skills/<group>/<name>/SKILL.md，返回 name -> { group, path }。
+ * 分组目录会被直接挂给自定义技能根，所以每个预设只挂自己用到的那几个分组。
+ */
+function scanSkills(baseDir) {
+  const index = new Map();
+  if (!existsSync(baseDir)) return index;
+
+  const children = readdirSync(baseDir).sort();
+  const looksLikeGroup = children.some(
+    (n) => existsSync(join(baseDir, n, 'SKILL.md')) && statSync(join(baseDir, n)).isDirectory(),
+  );
+
+  // --skills-dir 直接指向一个分组目录时，把它自己当作唯一分组，避免整棵树被跳过
+  const groupDirs = looksLikeGroup
+    ? [{ group: basename(baseDir), path: baseDir }]
+    : children
+        .filter((n) => !n.startsWith('.') && statSync(join(baseDir, n)).isDirectory())
+        .filter((n) => !existsSync(join(baseDir, n, 'SKILL.md'))) // 布局错误，交给校验器报告
+        .map((n) => ({ group: n, path: join(baseDir, n) }));
+
+  for (const { group, path } of groupDirs) {
+    for (const skillName of readdirSync(path).sort()) {
+      const skillDir = join(path, skillName);
+      if (skillName.startsWith('.')) continue;
+      if (!statSync(skillDir).isDirectory()) continue;
+      if (!existsSync(join(skillDir, 'SKILL.md'))) continue;
+      index.set(skillName, { group, path });
+    }
+  }
+  return index;
+}
+
+/** 按预设引用的技能，算出需要挂载的分组目录（去重、保持声明顺序）。 */
+function skillDirsForPreset(preset, skillIndex, fallbackDir) {
+  const refs = Array.isArray(preset.skills) ? preset.skills : [];
+  const dirs = [];
+  for (const ref of refs) {
+    const hit = skillIndex.get(ref);
+    if (!hit) continue;
+    if (!dirs.includes(hit.path)) dirs.push(hit.path);
+  }
+  return dirs.length > 0 ? dirs : [fallbackDir];
 }
 
 function summarizeDescription(preset) {
@@ -344,7 +389,12 @@ if (files.length === 0) {
   process.exit(1);
 }
 
-const skillsDirs = [skillsDir];
+const skillIndex = scanSkills(skillsDir);
+if (skillIndex.size === 0) {
+  console.error(`✗ ${skillsDir} 下没有找到 skills/<group>/<name>/SKILL.md`);
+  process.exit(1);
+}
+
 const criticPresetId = (id) => `${id}-critic`;
 
 const blocks = [];
@@ -354,6 +404,15 @@ for (const file of files) {
     console.error(`✗ ${file}: 缺少 id，已跳过`);
     continue;
   }
+
+  const skillsDirs = skillDirsForPreset(preset, skillIndex, skillsDir);
+  const missing = (Array.isArray(preset.skills) ? preset.skills : []).filter(
+    (s) => !skillIndex.has(s),
+  );
+  for (const m of missing) {
+    console.error(`warn  ${file}: 技能 "${m}" 未在 ${skillsDir} 下找到，未挂载`);
+  }
+
   const opts = { skillsDirs, criticPresetId };
 
   const parts = [renderPreset(preset, opts)];
@@ -367,6 +426,7 @@ const header = [
   `# 由 scripts/render-presets.mjs 生成；改动请改 presets/*.yaml 后重新生成。`,
   `# 挂载方式：把本文件内容并入 profile 的 cordis.patch.yml，或作为 --patch 覆盖层。`,
   `# 生成参数：skills=${skillsDir}${withCritic ? '' : '  critic=off'}`,
+  `# 每个预设只挂载它引用的技能所在的分组目录，预设之间不共享技能。`,
   ``,
   `- insert:`,
 ].join('\n');

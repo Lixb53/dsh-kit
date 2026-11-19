@@ -11,8 +11,9 @@ AI 贡献者请优先读 [`AGENTS.md`](AGENTS.md)；本文件是给人看的完�
 ```
 dsh-kit/
 ├── skills/
-│   └── <name>/
-│       └── SKILL.md          # 必须，唯一真源
+│   └── <group>/              # 隔离单元，对应一条 customSkillDirs
+│       └── <name>/
+│           └── SKILL.md      # 必须，唯一真源
 ├── presets/
 │   └── <name>.yaml           # 预设，只引用技能名
 ├── docs/
@@ -29,18 +30,21 @@ dsh-kit/
 └── README.md
 ```
 
-三条硬规则：
+四条硬规则：
 
-1. **一个技能一个目录**，目录内必须有 `SKILL.md`，`name` 与目录名一致。
-2. **`presets/` 只做引用**：列出该预设启用的技能名、工具白名单、MCP 开关、评审维度和交付物，**不要把技能内容内联进去**。否则一次技能更新要改所有引用它的预设。
-3. **只保留一个真源目录**。其他工具（Claude Code、Codex 等）通过符号链接或安装脚本指向 `skills/`，不要复制多份。
+1. **技能必须是两级目录** `skills/<group>/<name>/SKILL.md`。顶层 `skills/<name>/SKILL.md` 是错误布局，直接校验失败。
+2. **分组决定可见性**：DSH 的技能根是一级目录即一个技能，一条 `customSkillDirs` 会把该目录下全部技能暴露出去。所以 `<group>` 就是隔离单元——预设挂载 `skills/product`，就只看得到 `product` 分组里的技能。
+3. **`presets/` 只做引用**：列出该预设启用的技能名、工具白名单、MCP 开关、评审维度和交付物，**不要把技能内容内联进去**。否则一次技能更新要改所有引用它的预设。
+4. **只保留一个真源目录**。其他工具（Claude Code、Codex 等）通过符号链接或安装脚本指向 `skills/`，不要复制多份。
 
 ### 新增一个技能
 
 ```bash
-mkdir skills/my-skill
-$EDITOR skills/my-skill/SKILL.md
+mkdir -p skills/<group>/my-skill
+$EDITOR skills/<group>/my-skill/SKILL.md
 ```
+
+选哪个分组，取决于「谁应该看到它」：只给 UI 预设用的技能放 `design`；多个预设都要用的技能，要么放一个共享分组并让这些预设都挂载它，要么各放一份（不推荐，会漂移）。
 
 `SKILL.md` 最小结构：
 
@@ -71,17 +75,17 @@ description: 一句话说明「什么时候用、解决什么问题」，不超�
 | `docs:` | 纯文档更新 | 不触发 |
 | `refactor:` | 重组目录或技能结构，不改变行为 | 不触发 |
 | `chore:` | CI、模板、gitignore 等维护 | 不触发 |
-| `feat!:` / `fix!:` | 破坏性变更（改名、删除技能、改预设契约） | **major** |
+| `feat!:` / `fix!:` | 破坏性变更（改名、删除技能、**移动技能分组**、改预设契约） | **major** |
 
 **原子性**：一个 commit 只做一件事。不要混「新增技能」和「改 README」。
 
 示例：
 
 ```
-feat(skills): add backend-dev SKILL.md
+feat(skills): add accessibility-review under design group
 fix(presets): correct frontend-dev skill reference
 docs(contributing): add skill validation requirements
-feat!(presets): rename product-designer to product-design
+feat!(skills): move ui-design from design group to ui group
 ```
 
 **合并策略**：推荐 **squash merge**。线性历史下 Release Please 生成的 CHANGELOG 最干净，也避免 PR 内部「先加后删」污染发布日志。
@@ -99,10 +103,10 @@ feat!(presets): rename product-designer to product-design
 
 ### PR 必须满足
 
-- [ ] 新增/修改技能：`skills/<name>/SKILL.md` 存在，frontmatter 含 `name`、`description`，`name` 与目录名一致。
-- [ ] 预设：若引用的技能名变化，`presets/*.yaml` 已同步，且引用目标存在。
+- [ ] 新增/修改技能：`skills/<group>/<name>/SKILL.md` 存在，frontmatter 含 `name`、`description`，`name` 与目录名一致，且**不在 `skills/` 顶层**。
+- [ ] 预设：若引用的技能名或所在分组变化，`presets/*.yaml` 已同步，且渲染出的挂载目录正确。
 - [ ] `CHANGELOG.md` 的 `## [Unreleased]` 有对应记录（使用 Release Please 时由工具生成，人工只需保证 commit 类型正确）。
-- [ ] `node scripts/validate-skills.mjs` 通过（CI 也会跑）。
+- [ ] `npm test` 通过（CI 也会跑）。
 
 PR 描述就三行：**改了什么、对应 Issue、是否已更新 CHANGELOG/预设引用**。
 
@@ -114,8 +118,9 @@ PR 描述就三行：**改了什么、对应 Issue、是否已更新 CHANGELOG/�
 
 `scripts/validate-skills.mjs` 检查：
 
+- 技能位于 `skills/<group>/<name>/SKILL.md`；顶层 `skills/<name>/SKILL.md` 报错并提示正确路径；
 - `SKILL.md` 以 `---` 开头，frontmatter 含 `name`、`description`；
-- `name` 为 lowercase kebab-case 且与目录名一致；
+- `name` 为 lowercase kebab-case 且与目录名一致；分组名同样必须是 kebab-case；
 - `description` 长度 1–1024；
 - `presets/*.yaml` 的 `id` 与文件名一致，`skills:` 引用的技能全部存在；
 - `CHANGELOG.md` 含 `## [Unreleased]`；
@@ -125,6 +130,7 @@ PR 描述就三行：**改了什么、对应 Issue、是否已更新 CHANGELOG/�
 
 - 输出是合法 YAML，顶层为 `- insert:` 列表；
 - 每个预设都挂 `persona` / `skill-filesystem` / `tool-skill`，且 `customSkillDirs` 非空；
+- **技能隔离**：预设挂载的分组必须恰好是它引用的技能所在分组——多挂无关分组即失败，漏挂也失败；
 - 评审预设（`<id>-critic`）的 `tool-fs` 必须 `write:false` / `edit:false`，且不挂 shell；
 - `critic` 插件引用的预设存在；
 - 渲染出的预设与 `presets/*.yaml` 一一对应。

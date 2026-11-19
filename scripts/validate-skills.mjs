@@ -2,13 +2,19 @@
 /**
  * dsh-kit 校验器（零依赖）。
  *
+ * 目录约定：skills/<group>/<name>/SKILL.md
+ *   - <group> 是显式分组目录（product / design / frontend / backend / ...）
+ *   - <name>  是技能名，必须与 frontmatter 的 name 一致
+ *   - 预设通过技能名引用，渲染器据此只挂载相关分组，实现预设间技能隔离
+ *
  * 检查项：
- *  1. skills/<name>/SKILL.md 存在，且以 --- 开头的 YAML frontmatter
+ *  1. skills/<group>/<name>/SKILL.md 存在，且以 --- 开头的 YAML frontmatter
  *  2. frontmatter 含 name、description；name 与目录名一致且为 lowercase kebab-case
  *  3. description 长度 1–1024
- *  4. presets/*.yaml 的 id 与文件名一致，skills: 引用的技能全部存在
- *  5. CHANGELOG.md 含 "## [Unreleased]"
- *  6. version.txt 与 .release-please-manifest.json 的版本一致
+ *  4. 顶层 skills/<name>/SKILL.md 属于错误布局（必须归入分组）
+ *  5. presets/*.yaml 的 id 与文件名一致，skills: 引用的技能全部存在
+ *  6. CHANGELOG.md 含 "## [Unreleased]"
+ *  7. version.txt 与 .release-please-manifest.json 的版本一致
  *
  * 用法：node scripts/validate-skills.mjs [repoRoot]
  */
@@ -27,6 +33,17 @@ const KEBAB = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 function readText(path) {
   return readFileSync(path, 'utf8').replace(/^\uFEFF/, '');
+}
+
+function isDir(p) {
+  return existsSync(p) && statSync(p).isDirectory();
+}
+
+function listDirs(p) {
+  if (!isDir(p)) return [];
+  return readdirSync(p)
+    .filter((n) => !n.startsWith('.') && isDir(join(p, n)))
+    .sort();
 }
 
 /** 解析 SKILL.md 的 frontmatter，只取单行 key: value。 */
@@ -77,71 +94,92 @@ function parseYamlScalar(text, key) {
 }
 
 // ---------------------------------------------------------------------------
-// 1–3. 技能
+// 1–4. 技能（分组布局）
 // ---------------------------------------------------------------------------
 
-const skillsDir = join(root, 'skills');
+const skillsRoot = join(root, 'skills');
 const skillNames = new Set();
+const skillGroups = new Map(); // name -> group
 
-if (!existsSync(skillsDir)) {
+if (!isDir(skillsRoot)) {
   err('缺少 skills/ 目录');
 } else {
-  const entries = readdirSync(skillsDir).filter((name) => {
-    const p = join(skillsDir, name);
-    return statSync(p).isDirectory() && !name.startsWith('.');
-  });
+  const groups = listDirs(skillsRoot);
 
-  if (entries.length === 0) err('skills/ 下没有任何技能目录');
+  if (groups.length === 0) err('skills/ 下没有任何分组目录');
 
-  for (const dirName of entries.sort()) {
-    const skillPath = join(skillsDir, dirName, 'SKILL.md');
-    const where = `skills/${dirName}/SKILL.md`;
+  for (const groupName of groups) {
+    const groupPath = join(skillsRoot, groupName);
 
-    if (!existsSync(skillPath)) {
-      err(`${where}: 缺少 SKILL.md`);
+    // 顶层若直接是 SKILL.md，说明把技能放在了 skills/ 根下，布局错误
+    if (existsSync(join(groupPath, 'SKILL.md'))) {
+      err(
+        `skills/${groupName}/SKILL.md: 技能必须放在分组目录下，正确路径是 skills/<group>/${groupName}/SKILL.md`,
+      );
       continue;
     }
 
-    const text = readText(skillPath);
-    const { data, body } = parseFrontmatter(text, where);
-
-    if (!data.name) err(`${where}: frontmatter 缺少 name`);
-    if (!data.description) err(`${where}: frontmatter 缺少 description`);
-
-    if (data.name) {
-      if (!KEBAB.test(data.name)) {
-        err(`${where}: name "${data.name}" 不是 lowercase kebab-case`);
-      }
-      if (data.name !== dirName) {
-        err(`${where}: name "${data.name}" 与目录名 "${dirName}" 不一致`);
-      }
-      if (skillNames.has(data.name)) {
-        err(`${where}: 技能名 "${data.name}" 重复`);
-      }
-      skillNames.add(data.name);
+    if (!KEBAB.test(groupName)) {
+      err(`skills/${groupName}: 分组名不是 lowercase kebab-case`);
     }
 
-    if (data.description) {
-      const len = [...data.description].length;
-      if (len < 1 || len > 1024) {
-        err(`${where}: description 长度 ${len}，应在 1–1024 字符之间`);
-      }
+    const skillDirs = listDirs(groupPath);
+    if (skillDirs.length === 0) {
+      warn(`skills/${groupName}: 分组为空`);
+      continue;
     }
 
-    if (body.trim().length === 0) {
-      err(`${where}: 正文为空`);
-    } else if (body.length > 20000) {
-      warn(`${where}: 正文 ${body.length} 字符，建议拆分或把细节移入 references/`);
+    for (const dirName of skillDirs) {
+      const where = `skills/${groupName}/${dirName}/SKILL.md`;
+      const skillPath = join(groupPath, dirName, 'SKILL.md');
+
+      if (!existsSync(skillPath)) {
+        err(`${where}: 缺少 SKILL.md`);
+        continue;
+      }
+
+      const text = readText(skillPath);
+      const { data, body } = parseFrontmatter(text, where);
+
+      if (!data.name) err(`${where}: frontmatter 缺少 name`);
+      if (!data.description) err(`${where}: frontmatter 缺少 description`);
+
+      if (data.name) {
+        if (!KEBAB.test(data.name)) {
+          err(`${where}: name "${data.name}" 不是 lowercase kebab-case`);
+        }
+        if (data.name !== dirName) {
+          err(`${where}: name "${data.name}" 与目录名 "${dirName}" 不一致`);
+        }
+        if (skillNames.has(data.name)) {
+          err(`${where}: 技能名 "${data.name}" 重复（已存在于分组 ${skillGroups.get(data.name)}）`);
+        }
+        skillNames.add(data.name);
+        skillGroups.set(data.name, groupName);
+      }
+
+      if (data.description) {
+        const len = [...data.description].length;
+        if (len < 1 || len > 1024) {
+          err(`${where}: description 长度 ${len}，应在 1–1024 字符之间`);
+        }
+      }
+
+      if (body.trim().length === 0) {
+        err(`${where}: 正文为空`);
+      } else if (body.length > 20000) {
+        warn(`${where}: 正文 ${body.length} 字符，建议拆分或把细节移入 references/`);
+      }
     }
   }
 }
 
 // ---------------------------------------------------------------------------
-// 4. 预设
+// 5. 预设
 // ---------------------------------------------------------------------------
 
 const presetsDir = join(root, 'presets');
-if (!existsSync(presetsDir)) {
+if (!isDir(presetsDir)) {
   err('缺少 presets/ 目录');
 } else {
   const presets = readdirSync(presetsDir).filter((n) => n.endsWith('.yaml') || n.endsWith('.yml'));
@@ -180,7 +218,7 @@ if (!existsSync(presetsDir)) {
 }
 
 // ---------------------------------------------------------------------------
-// 5. CHANGELOG
+// 6. CHANGELOG
 // ---------------------------------------------------------------------------
 
 const changelogPath = join(root, 'CHANGELOG.md');
@@ -191,7 +229,7 @@ if (!existsSync(changelogPath)) {
 }
 
 // ---------------------------------------------------------------------------
-// 6. 版本一致性
+// 7. 版本一致性
 // ---------------------------------------------------------------------------
 
 const versionPath = join(root, 'version.txt');
@@ -212,8 +250,8 @@ if (existsSync(versionPath) && existsSync(manifestPath)) {
 // 输出
 // ---------------------------------------------------------------------------
 
-const skillCount = skillNames.size;
-const presetCount = existsSync(presetsDir)
+const groupCount = isDir(skillsRoot) ? listDirs(skillsRoot).length : 0;
+const presetCount = isDir(presetsDir)
   ? readdirSync(presetsDir).filter((n) => /\.ya?ml$/.test(n)).length
   : 0;
 
@@ -225,4 +263,6 @@ if (errors.length > 0) {
   process.exit(1);
 }
 
-console.log(`✓ 校验通过：${skillCount} 个技能，${presetCount} 个预设，${warnings.length} 个警告`);
+console.log(
+  `✓ 校验通过：${skillNames.size} 个技能（${groupCount} 个分组），${presetCount} 个预设，${warnings.length} 个警告`,
+);
