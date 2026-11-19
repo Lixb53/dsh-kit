@@ -1,20 +1,21 @@
 # 四角色预设使用指南（逐步操作）
 
-> 适用版本：仓库 `main`，commit `400629c` 起。
-> 目标：在任意机器（Windows / macOS / Linux）上，把本仓库的四个角色预设装进 DSH 并日常使用。
+> 适用版本：仓库 `main` 最新（本文按 commit `8b63960` 更新）。
+> 目标：在任意机器（Windows / macOS / Linux）上，把四个角色预设及其外部技能装进 DSH 并日常使用。
 > 核心原则：**仓库里不放机器专属路径**。所有绝对路径都在目标机器上运行时生成，生成物不入库。
 
 ---
 
-## 0. 先分清三层东西（避免概念混乱）
+## 0. 先分清四层东西（避免概念混乱）
 
 | 层 | 位置 | 是否入库 | 作用 |
 |---|---|---|---|
-| ① 声明源 | `G:\dsh-kit\presets\*.yaml`、`skills/` | 是 | 你维护的真相源：角色提示词、引用哪些技能、门禁 |
-| ② 生成物 | `G:\dsh-kit\.generated\dsh-role-presets\`（`package.json` + `cordis.patch.yml`） | 否（已 gitignore） | 在本机由 ① 渲染出来的 DSH bundle，路径按本机推导 |
-| ③ 已安装插件 | DSH profile（本机 `G:\dsh-env\home\profiles\desktop`） | 否 | ② 被安装进 DSH 后生效，GUI 里能看到预设 |
+| ① 声明源 | `presets/*.yaml`、`skills/`、`skills-manifest.json` | 是 | 你维护的真相源：角色提示词、引用的内部技能、外部技能清单与 pin |
+| ② 外部技能下载物 | `.generated/external-skills/` | 否（gitignore） | 脚本按 pin 拉取的外部知识包，按预设平铺、互不污染 |
+| ③ 本机 bundle | `.generated/dsh-role-presets/`（`package.json` + `cordis.patch.yml`） | 否（gitignore） | 由 ① + ② 在本机渲染出的 DSH bundle，路径按本机推导 |
+| ④ 已安装插件 | DSH profile（本机如 `G:\dsh-env\home\profiles\desktop`） | 否 | ③ 装进 DSH 后生效，GUI 里可选预设 |
 
-日常流程：改① → 跑命令生成② → 把②装进③ → 新会话选预设。换机器只重做②和③。
+日常流程：改① → 装/更新② → 渲染③ → 装进④ → 新会话选预设。换机器只重做②③④。
 
 四个预设：`product-design`（产品）→ `ui-design`（UI）→ `frontend-dev` / `backend-dev`（前后端）。每个还自动生成一个同名 `-critic` 只读评审预设，不用手动选。
 
@@ -39,8 +40,10 @@ git --version
 ```powershell
 cd G:\dsh-kit
 git pull
-git log --oneline -1     # 应显示 400629c 或更新
+git log --oneline -1     # 应是 8b63960 或更新
 ```
+
+> 外部技能用 `git fetch` 下载，依赖你已配置的 git 代理/凭据。本机 `~/.gitconfig` 里 github.com 走 `127.0.0.1:7897`，脚本会自动沿用，无需额外设置。
 
 ### 步骤 1.2 — 安装依赖
 
@@ -49,46 +52,43 @@ cd G:\dsh-kit
 npm ci
 ```
 
-- 成功标志：末尾无 `error`，出现 `added N packages`。
-- 若 `npm ci` 报 lock 文件不一致，改用 `npm install`（仅此情况）。
+成功标志：末尾无 `error`，出现 `added N packages`。若 `npm ci` 报 lock 文件不一致，改用 `npm install`（仅此情况）。
 
-### 步骤 1.3 —（可选但推荐）配置外部技能
+### 步骤 1.3 — 一键安装外部技能（推荐）
 
-外部技能是各角色的「知识包」，不配也能用，但会打折。catalog 在 `docs/skill-catalog.md`。
-
-你本机已经装了一批技能，目录是：
-
-```
-C:\Users\51967\Documents\dsh-presets\product-ui-design-v1\skills
-```
-
-里面有 `ui-ux-pro-max`、`vercel-react-best-practices`、`web-design-guidelines`、`composition-patterns`、`webapp-testing`、`design-critique` 等 21 个。
-
-**复制模板并填写：**
+外部技能是各角色的"知识包"。脚本按 [skills-manifest.json](skills-manifest.json) 的版本 pin 自动下载，并按预设隔离：
 
 ```powershell
 cd G:\dsh-kit
+npm run skills -- install     # 下载 8 个可自动安装的包
+npm run skills -- doctor      # 自检完整性，应显示"全部 auto 技能安装完整"
+npm run skills -- sync        # 生成按角色隔离的挂载映射 external-skills.local.yaml
+```
+
+成功后 `external-skills.local.yaml` 应包含 product-design / ui-design / frontend-dev 三个挂载根（backend-dev 的三个包都是手动类，故无映射属正常）。查看内容：`npm run skills -- status`。
+
+脚本会自动装这些（实测已全部验证）：
+
+| 预设 | 技能 |
+|---|---|
+| product-design | one-line-prototype、deliver-prd、deliver-user-stories、deliver-acceptance-criteria、deliver-edge-cases、develop-adr、utility-mermaid-diagrams |
+| ui-design | ui-ux-pro-max、design-system、design-tokens、design-component、design-qa、gate、critique、apply-aesthetic、a11y-core、accessibility-lead、contrast-master |
+| frontend-dev | vercel-react-best-practices、composition-patterns、web-design-guidelines、code-review-skill、core-web-vitals、performance、web-quality-audit |
+
+少数 `manual` 包（spec-kit CLI、backendpro、postgres-mcp、dsh-notes-board、playwright-cli skills、frontend-design）脚本不会装，按 [docs/skill-catalog.md](skill-catalog.md) 手动处理。详见 [docs/skills-manager.md](skills-manager.md)。
+
+<details>
+<summary>备用：手动配置外部技能（不用脚本时）</summary>
+
+若不想用脚本，可复制模板手工填写：
+
+```powershell
 copy external-skills.local.example.yaml external-skills.local.yaml
 ```
 
-用编辑器打开 `external-skills.local.yaml`，改成下面这样（按你本机实际路径）：
+编辑文件，把每个预设指向一个"只含该角色技能"的目录（DSH 只认目录下含 `SKILL.md` 的直接子目录，深层需平铺）。注意：一条目录会被整体暴露给该预设，四个预设都指同一个目录会失去隔离。此文件已被 gitignore。
 
-```yaml
-ui-design:
-  - 'C:\Users\51967\Documents\dsh-presets\product-ui-design-v1\skills'
-product-design:
-  - 'C:\Users\51967\Documents\dsh-presets\product-ui-design-v1\skills'
-frontend-dev:
-  - 'C:\Users\51967\Documents\dsh-presets\product-ui-design-v1\skills'
-backend-dev:
-  - 'C:\Users\51967\Documents\dsh-presets\product-ui-design-v1\skills'
-```
-
-⚠️ **隔离代价**：一条目录会被整体暴露给该预设。上面这样四个预设都会看到全部 21 个技能，失去按角色隔离的效果。若要保持隔离，为不同预设准备不同安装根（每个根只放该角色该看的技能），分别填这里。可以只给一两个预设配置，其余留空。
-
-确认文件确实生效：下一步渲染时，`warn ... external_skills ... 未配置` 的提示里，配置了预设的那几条会消失。
-
-> 这个文件已被 gitignore，永远不会提交。换机器时每台机器各配一份。
+</details>
 
 ### 步骤 1.4 — 生成本机 bundle
 
@@ -97,12 +97,10 @@ cd G:\dsh-kit
 npm run install:presets
 ```
 
-成功标志（末尾三行）：
+成功标志：
 
 ```
 ✓ bundle 已生成：G:\dsh-kit\.generated\dsh-role-presets
-  下一步：用 plugin_manager install_bundle 安装该目录，或在 GUI 插件管理里安装。
-  换机器 / 换 OS：重新 clone 仓库 → npm ci → node scripts/install-presets.mjs → 重新安装此目录。
 ```
 
 核对生成物：
@@ -112,59 +110,37 @@ Get-ChildItem G:\dsh-kit\.generated\dsh-role-presets
 # 应有 cordis.patch.yml 和 package.json
 ```
 
-验证路径是按本机推导的、没有写死（可选）：
+验证挂载正确（可选）：
 
 ```powershell
-Select-String -Path G:\dsh-kit\.generated\dsh-role-presets\cordis.patch.yml -Pattern 'customSkillDirs' -Context 0,1 | Select-Object -First 8
+Select-String -Path G:\dsh-kit\.generated\dsh-role-presets\cordis.patch.yml -Pattern 'customSkillDirs' -Context 0,1 | Select-Object -First 12
 ```
 
-期望看到 `'G:\dsh-kit\skills\product'` 等——这是**运行时从仓库位置推导出来的**，不是常量。
+期望每个预设挂自己的 `skills\<分组>` +（外部技能）`.generated\external-skills\<预设>`——都是运行时推导的路径，不是写死的常量。
 
 ### 步骤 1.5 — 把 bundle 装进 DSH
 
 两种方式任选其一：
 
-**方式 A：让我来装（推荐，最省事）**
-直接对我说：「把 G:\dsh-kit\.generated\dsh-role-presets 安装为 DSH bundle」。我会调用 `plugin_manager install_bundle` 完成，并回报安装结果。
+**方式 A：让我来装（推荐）**
+对我说：「把 G:\dsh-kit\.generated\dsh-role-presets 安装为 DSH bundle」。我调用 `plugin_manager install_bundle` 完成并回报结果。
 
-**方式 B：你在 GUI 里装**
-打开 `http://127.0.0.1:60400` → 设置/插件管理（Plugins）→ 添加插件（Add plugin）→ 选择本地目录 → 选中 `G:\dsh-kit\.generated\dsh-role-presets` → 确认。
+**方式 B：GUI 手动装**
+打开 `http://127.0.0.1:60400` → 设置/插件管理（Plugins）→ 添加插件（Add plugin）→ 选本地目录 → 选中 `G:\dsh-kit\.generated\dsh-role-presets` → 确认。
 
-安装成功的判断依据：插件列表里出现 `@local/dsh-role-presets`，且状态为 enabled。如果条目存在但带错误诊断，说明 bundle 有问题，把诊断文本发我。
+成功判断：插件列表出现 `@local/dsh-role-presets` 且状态 enabled。若带错误诊断，把诊断文本发我。
 
 ### 步骤 1.6 — 验证生效
 
-1. **必须开一个新会话**。已有会话会沿用旧的插件组合，看不到新预设。
-2. 在新建会话的预设选择器（Agent Preset / 智能体预设）里，应能看到四个新选项：
-   - 产品设计（`product-design`）
-   - UI 设计（`ui-design`）
-   - 前端开发（`frontend-dev`）
-   - 后端开发（`backend-dev`）
-   - 旧的 `产品/UI 设计`（`product-ui-design`）仍在列表里——别选混。
-3. 随便选一个，发一条简单任务（如「帮我写一个登录页的需求澄清」），看回复是否符合该角色风格（会声明 S/M/L 分级、有门禁结论）。
+1. **必须开一个新会话**。已有会话沿用旧插件组合，看不到新预设。
+2. 预设选择器里应出现四个新选项：产品设计 / UI 设计 / 前端开发 / 后端开发。旧的 `产品/UI 设计` 仍在列表里——别选混。
+3. 选一个发条简单任务（如"帮我写一个登录页的需求澄清"），看回复是否符合角色风格（声明 S/M/L 分级、有门禁结论）。
 
 ---
-
-## 1b.（推荐）用脚本一键安装外部技能
-
-外部技能（各角色的知识包）可以不用手动配，交给脚本：
-
-```powershell
-cd G:\dsh-kit
-npm run skills -- install     # 按 skills-manifest.json 的 pin 下载全部可自动安装的包
-npm run skills -- sync        # 生成按角色隔离的挂载映射 external-skills.local.yaml
-npm run install:presets       # 重新渲染 bundle（会带上外部技能）
-```
-
-维护命令：`npm run skills -- list`（看清单与状态）、`update`（重装到 pin 版本）、`remove <id>`（删除）、`status`、`doctor`（自检）。增删改只需改 `skills-manifest.json` 再 `install/update` + `sync` + `install:presets`。完整说明见 [`docs/skills-manager.md`](skills-manager.md)。
-
-> 脚本生成的 `external-skills.local.yaml` 会覆盖第 1.3 步的手工配置——两者二选一，推荐用脚本。少数 `manual` 包（spec-kit / backendpro / postgres-mcp 等 CLI/MCP/插件）仍需按 catalog 手动安装。
 
 ## 2. 日常使用
 
 ### 2.1 选哪个预设
-
-按交付链从上到下用：
 
 | 你现在的任务 | 选 |
 |---|---|
@@ -177,85 +153,83 @@ npm run install:presets       # 重新渲染 bundle（会带上外部技能）
 
 ### 2.2 门禁怎么工作（重要）
 
-每个预设都内置两层门禁，写入了 persona：
-
-- **C0 确定性门禁：每次必跑。** 例如产品角色的 R 编号四处可追溯、UI 的 lint + 结构断言双 0、前端的类型检查/构建/测试、后端的引用可 grep 与数据库只读。这一步不会跳过。
-- **C1 独立评审：默认关闭。** 只有以下三种情况才拉起一次只读 critic（恰好一轮，返工不复审）：
+- **C0 确定性门禁：每次必跑。** 产品角色的 R 编号四处可追溯、UI 的 lint + 结构断言双 0、前端的类型检查/构建/测试、后端的引用可 grep 与数据库只读——不会跳过。
+- **C1 独立评审：默认关闭。** 只有三种情况拉起一次只读 critic（恰好一轮，返工不复审）：
   1. 你明确说「评审一下 / 复查 / 独立看看」；
-  2. 任务含不可逆或高代价决策（如 L 级 PRD 定稿、架构变更、ADR 定稿、生产库变更前）；
-  3. C0 全过但主代理对某个主观维度没把握，主动声明理由后申请。
+  2. 含不可逆/高代价决策（L 级 PRD 定稿、架构变更、ADR 定稿、生产库变更前）；
+  3. C0 全过但主代理对某主观维度没把握，声明理由后申请。
 
-未触发时，交付里会有一行「未经独立评审（按需 critic 未触发）」——看到这行是正常的，不是漏了。
+未触发时交付里会有「未经独立评审（按需 critic 未触发）」——正常，不是漏了。
 
-### 2.3 怎么让 critic 跑起来
+### 2.3 让 critic 跑起来
 
-直接在任务里加一句即可，例如：
+在任务里加一句即可：
 
 ```
 按 product-design 预设做这个需求，完成后评审一下。
 ```
 
-触发后 critic 只读你的产物和锁定契约，输出 Keep / Fix(P0/P1) / Quick wins / 需实测 / 门禁结论。主代理按问题清单自查 + 重跑 C0，不再自动开第二轮；你要求才会开第二轮对账。
+critic 只读你的产物和锁定契约，输出 Keep / Fix(P0/P1) / Quick wins / 需实测 / 门禁结论。主代理按问题清单自查 + 重跑 C0，不自动开第二轮；你要求才开。
 
 ---
 
-## 3. 改了预设/技能之后
+## 3. 维护：改预设 / 改技能 / 改外部技能
 
-每次改 `presets/*.yaml` 或 `skills/` 下的内容：
+### 3.1 改预设或仓库内技能
+
+每次改 `presets/*.yaml` 或 `skills/` 下内容：
 
 ```powershell
 cd G:\dsh-kit
-npm test                      # 必须 0 错误：validate + check-render
+npm test                      # 必须 0 错误
 npm run install:presets       # 重新生成本机 bundle
 ```
 
-然后**重新安装/更新** bundle：
+然后**重装/更新 bundle**（方式 A 让我装，或 GUI 里更新），最后开**新会话**验证。已有会话不会吃到新定义（DSH 设计如此）。
 
-- 方式 A：对我说「重新安装 G:\dsh-kit\.generated\dsh-role-presets」；
-- 方式 B：GUI 插件管理里对该 bundle 执行更新/重装。
+> 改预设**结构**（新增字段/改渲染语义）须同步 `scripts/render-presets.mjs` 与 `docs/presets.md`。
 
-最后开**新会话**验证。已有会话不会吃到新定义（这是 DSH 的设计：Agent 保持启动时的插件组合）。
+### 3.2 增删改外部技能
 
-> 如果改了预设的**结构**（新增字段或改渲染语义），按 AGENTS.md 要求同步 `scripts/render-presets.mjs` 与 `docs/presets.md`。
+改 `skills-manifest.json`，然后按类型操作：
+
+```powershell
+# 增：加条目（先在 catalog 核实许可与 pin）后
+npm run skills -- install <新id>
+npm run skills -- sync
+
+# 改版本：改 ref 后
+npm run skills -- update <id>
+npm run skills -- sync
+
+# 删：
+npm run skills -- remove <id>
+npm run skills -- sync
+
+# 最后都要重渲染 bundle
+npm run install:presets
+```
+
+`sync` 会先清空各预设挂载根，删除后不会残留。每次 `sync` 后必须重跑 `install:presets`（bundle 里的 `customSkillDirs` 是渲染时写进去的）。详见 [docs/skills-manager.md](skills-manager.md)。
 
 ---
 
 ## 4. 换机器 / 换 macOS
 
-仓库本身不含绝对路径，所以迁移只需在新机器上重做「生成 + 安装」。
-
-### 步骤 4.1 — 新机器准备
+仓库不含绝对路径，新机器重做"下载 + 渲染 + 安装"：
 
 ```bash
-git clone <你的仓库地址> dsh-kit
+git clone <仓库地址> dsh-kit
 cd dsh-kit
 npm ci
-```
-
-macOS / Linux 用 bash 执行上面命令；路径分隔符由脚本自动处理。
-
-### 步骤 4.2 —（可选）重配外部技能
-
-`external-skills.local.yaml` 不入库，不会随 clone 过来。在新机器上重新复制模板并填**新机器**的路径：
-
-```bash
-cp external-skills.local.example.yaml external-skills.local.yaml
-# 编辑文件，填入新机器上外部技能的实际安装目录
-```
-
-### 步骤 4.3 — 生成并安装
-
-```bash
+npm run skills -- install && npm run skills -- sync   # 外部技能按新机器重新拉取
 npm run install:presets
+# 把新打印的 .generated/dsh-role-presets 装进本机 DSH
 ```
 
-脚本会打印新机器上的 bundle 目录（例如 `/Users/you/dsh-kit/.generated/dsh-role-presets`）。把这个目录装进新机器的 DSH（GUI 添加插件，或让我调用 `plugin_manager install_bundle`）。
+manual 包（CLI/MCP/插件）按 catalog 在新机器各自重装。开新会话验证四个预设出现。
 
-### 步骤 4.4 — 验证
-
-开新会话 → 预设选择器里出现四个角色 → 跑一个简单任务确认风格。
-
-旧机器上的 bundle 留着无妨；它指向旧路径，但你已经不用那台机器了。
+旧机器的 bundle 留着无妨（指向旧路径，已不用）。
 
 ---
 
@@ -264,11 +238,13 @@ npm run install:presets
 | 现象 | 原因 | 处理 |
 |---|---|---|
 | 选不到新预设 | 开的是旧会话 | 开一个**全新会话**再选 |
-| 渲染时报 `external_skills 未配置` | 没建 `external-skills.local.yaml` | 属预期 warn，不配也能用；要配见 1.3 |
-| `npm test` 报 `spawnSync ... EPERM` | 旧版本 check-render 用子进程；当前版本已改为直接调用 | 确认已 `git pull` 到 `400629c` 之后；仍出现则把完整报错发我 |
-| git 提交报 `.git/index.lock: Permission denied` | Windows 文件权限 | 曾在本机修过：为当前用户补了 `.git` 完整控制权限；恢复脚本在 `G:\dsh-work\acl-recovery\acl-backup-b5372d9587fe4a909455246a1032dd91.json.ps1`（不建议恢复，否则 git 又会写不进） |
-| 技能找不到（warn 技能未挂载） | 移动/重命名了仓库目录，生成物还是旧路径 | 在新位置重新 `npm run install:presets`，再重装 bundle |
-| 外部技能没生效 | 映射路径错，或目录里 `SKILL.md` 不在直接子目录 | 路径用绝对路径；DSH 只认目录下「含 SKILL.md 的直接子目录」，深层需平铺 |
+| 渲染报 `external_skills 未配置` | 没跑 `skills -- install/sync` | 属预期 warn，不配也能用；要配见 1.3 |
+| `skills -- install` 下载失败 | git 代理/凭据问题 | 确认 `git ls-remote https://github.com/...` 能通；脚本沿用你的 gitconfig |
+| `skills -- doctor` 报未安装/版本不符 | 没装或清单 ref 变了 | `npm run skills -- install` 或 `update` |
+| 外部技能没生效 | 没 `sync` 或没重渲染 bundle | `skills -- sync` → `install:presets` → 重装 bundle |
+| `npm test` 报 `spawnSync ... EPERM` | 旧版 check-render 用子进程；当前已直接调用 | 确认已 pull 到 `400629c` 之后 |
+| git 提交报 `.git/index.lock: Permission denied` | Windows 文件权限 | 本机已为当前用户补 `.git` 完整控制权限；恢复脚本在 `G:\dsh-work\acl-recovery\acl-backup-b5372d9587fe4a909455246a1032dd91.json.ps1`（不建议恢复，否则 git 又写不进） |
+| 技能找不到（warn 技能未挂载） | 移动/重命名了仓库目录 | 在新位置重跑 `install:presets`，再重装 bundle |
 
 ---
 
@@ -277,15 +253,20 @@ npm run install:presets
 ```powershell
 # 首次 / 换机器
 npm ci
+npm run skills -- install && npm run skills -- sync
 npm run install:presets
 # → 安装 .generated/dsh-role-presets 到 DSH，开新会话
 
-# 日常改动后
+# 外部技能维护
+npm run skills -- list / status / doctor
+npm run skills -- install [id] / update [id] / remove <id> / sync
+
+# 改了预设/技能后
 npm test
 npm run install:presets
 # → 重装 bundle，开新会话
 
-# 调试
+# 调试渲染
 node scripts/render-presets.mjs --out cordis.patch.yml
 node scripts/render-presets.mjs --only product-design,ui-design
 node scripts/render-presets.mjs --no-critic
@@ -299,10 +280,13 @@ node scripts/render-presets.mjs --no-critic
 |---|---|
 | `README.md` | 仓库总览、快速开始、版本与发版 |
 | `docs/presets.md` | 预设字段说明、渲染与技能挂载 |
+| `docs/skills-manager.md` | 外部技能安装与维护（增删改/版本/隔离） |
 | `docs/skill-catalog.md` | 外部技能来源、版本 pin、许可 |
-| `docs/external-skills.md` | 外部技能清单与本机挂载分离方案 |
+| `docs/external-skills.md` | 外部技能"清单与安装分离"方案原理 |
+| `skills-manifest.json` | 外部技能机器可读清单（脚本真源） |
 | `AGENTS.md` | AI 在本仓库工作的硬约束 |
 | `presets/*.yaml` | 四个角色预设声明（你主要改这里） |
+| `scripts/skills-manager.mjs` | 外部技能安装/维护脚本 |
 | `scripts/install-presets.mjs` | 生成本机 bundle |
 | `scripts/render-presets.mjs` | 渲染器（可导入 `renderPresets()`） |
-| `external-skills.local.example.yaml` | 外部技能本机映射模板 |
+| `external-skills.local.example.yaml` | 手动挂载映射模板（脚本用户无需关注） |
