@@ -4,6 +4,18 @@
 
 格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
+## [1.1.0](https://github.com/Lixb53/dsh-kit/compare/v1.0.1...v1.1.0) (2026-11-19)
+
+
+### Features
+
+* **skills:** 外部技能清单与安装分离，支持本地挂载与版本 pin ([a23dd1a](https://github.com/Lixb53/dsh-kit/commit/a23dd1a2f14a4bad98f603ab3665f6bb3f27e556))
+
+
+### Bug Fixes
+
+* **docs:** 修正 presets 最小示例中会被校验拒绝的 version 字段 ([72ddb95](https://github.com/Lixb53/dsh-kit/commit/72ddb95f5fff60912eada34eef35089ad3099c2b))
+
 ## [1.0.1](https://github.com/Lixb53/dsh-kit/compare/v1.0.0...v1.0.1) (2026-11-19)
 
 
