@@ -47,6 +47,15 @@
 - 不手动改版本号，不发手动 tag。
 - 保证 commit 类型正确，Release Please 会生成 Release PR，并同步 `version.txt` / manifest / `package.json`。
 
+## 推送与 PR（main 已开启分支保护）
+
+`main` 已开启保护：禁止强推/删除；合入需 1 approval + `validate` 检查通过 + 分支与 main 同步。`enforce_admins: false`，管理员可直接 push，但**日常一律走 PR**，不要直接 push main。
+
+- 改动前从最新 main 切分支：`git checkout main && git pull && git checkout -b feat/<desc>`（或 `fix/`、`docs/`）。
+- 提交后推分支、开 PR：`git push -u origin <branch>` → `gh pr create --fill`。
+- 合并前确认 `validate` 通过；Release Please 的 Release PR 走同样的 approve + 合并流程。
+- 合并用 squash merge，保持线性历史，CHANGELOG 才干净。
+
 ## 合并前
 
 - 运行 `npm test`（= `validate-skills.mjs` + `check-render.mjs`），必须 0 错误。
