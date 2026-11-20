@@ -53,6 +53,7 @@
 
 ### Changed
 
+- `AGENTS.md` 增补「推送与 PR」硬约束：`main` 已开启分支保护（禁强推/删除、合入需 1 approval + `validate` 通过 + 分支同步），日常改动一律切分支走 PR、squash 合并；与 `CONTRIBUTING.md` 的 GitHub Flow 对齐。
 - 跨机器可移植性：`customSkillDirs` 由运行时的仓库根推导（默认从脚本位置计算，不依赖 cwd / 操作系统），不再把 `G:\dsh-kit\skills\...` 写死进渲染结果；`.generated/` 与 `cordis.patch.yml` 加入 `.gitignore`。
 
 - 四个预设的 `persona` 按 `research/四角色预设提示词-按需critic版` 完善为完整行为契约：范围分级、分阶段工作流、确定性门禁 C0、按需 critic 门禁 C1（默认关闭，仅 T1/T2/T3 命中时跑恰好一次，未触发须显式声明）。
