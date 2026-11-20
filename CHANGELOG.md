@@ -4,6 +4,20 @@
 
 格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
+## [1.3.0](https://github.com/Lixb53/dsh-kit/compare/v1.2.0...v1.3.0) (2026-11-20)
+
+
+### Features
+
+* **presets:** 每个预设生成独立 bundle，支持单独安装/卸载 ([#10](https://github.com/Lixb53/dsh-kit/issues/10)) ([09d3a43](https://github.com/Lixb53/dsh-kit/commit/09d3a43916cffb028d3a3888dbe51cd278d2a0a7))
+* **scripts:** 用本机 DSH 真实 schema 校验预设插件配置 ([#12](https://github.com/Lixb53/dsh-kit/issues/12)) ([f7a1321](https://github.com/Lixb53/dsh-kit/commit/f7a13215f8a1b9d441e6be33426fee864c2cee9d))
+
+
+### Bug Fixes
+
+* **presets:** 补齐 tool-todo / tool-fs-search 的必填配置，修复预设挂载失败 ([#11](https://github.com/Lixb53/dsh-kit/issues/11)) ([c81c963](https://github.com/Lixb53/dsh-kit/commit/c81c963d411e45b854c16653abdb077fb8e0e3fd))
+* **skills:** 挂载点与下载物分两层，修复预设技能布局错乱 ([#8](https://github.com/Lixb53/dsh-kit/issues/8)) ([0bc3913](https://github.com/Lixb53/dsh-kit/commit/0bc3913b4fa19e152f8078f5cd57b2df0d8e7039))
+
 ## [1.2.0](https://github.com/Lixb53/dsh-kit/compare/v1.1.0...v1.2.0) (2026-11-19)
 
 
