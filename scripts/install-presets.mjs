@@ -112,3 +112,26 @@ for (const b of bundles) console.log(`    ${b.label.padEnd(20)} ${b.dir}`);
 console.log('  下一步：把需要的 bundle 目录用 plugin_manager install_bundle 安装，或在 GUI 插件管理里安装。');
 console.log('  独立升级某个预设：只重装对应目录的 bundle；改完 presets/*.yaml 后重跑本脚本。');
 console.log('  换机器 / 换 OS：重新 clone 仓库 → npm ci → node scripts/install-presets.mjs → 重新安装。');
+
+// 生成后用本机 DSH 的真实 schema 校验一遍：上游把某个字段改成必填时，
+// 只有这里能提前发现——否则失败会推迟到挂载阶段，表现为「预设装了却看不到」。
+// 拿不到 DSH 安装目录时该脚本自行跳过并返回 0，不影响生成流程。
+if (process.env.DSH_INSTALL_DIR) {
+  const { spawnSync } = await import('node:child_process');
+  const electron = process.env.DSH_NODE_EXECUTABLE;
+  const runAsElectron = process.env.DSH_INSTALL_DIR.includes('.asar') && electron;
+  const result = runAsElectron
+    ? spawnSync(electron, [join(root, 'scripts', 'check-plugin-config.mjs')], {
+        stdio: 'inherit',
+        env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
+        cwd: root,
+      })
+    : spawnSync(process.execPath, [join(root, 'scripts', 'check-plugin-config.mjs')], {
+        stdio: 'inherit',
+        cwd: root,
+      });
+  if (result.status !== 0) {
+    console.error('\n✗ 插件配置校验未通过：上面的 bundle 在本机挂载时会失败，请先修复再安装。');
+    process.exit(result.status ?? 1);
+  }
+}

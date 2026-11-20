@@ -10,7 +10,8 @@
     "install:presets": "node scripts/install-presets.mjs",
     "skills": "node scripts/skills-manager.mjs",
     "check:render": "node scripts/check-render.mjs",
-    "test": "node scripts/validate-skills.mjs && node scripts/check-render.mjs"
+    "check:config": "node scripts/check-plugin-config.mjs",
+    "test": "node scripts/validate-skills.mjs && node scripts/check-render.mjs && node scripts/check-plugin-config.mjs"
   },
   "devDependencies": {
     "js-yaml": "^4.1.0"
