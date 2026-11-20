@@ -2,16 +2,20 @@
 # 用法：复制为 external-skills.local.yaml（已被 .gitignore 忽略），按本机路径填写。
 # 语义：key = 预设 id，value = 该预设要额外挂载的本地外部技能安装目录列表。
 # 说明：一条目录会被整体暴露给该预设；目录内每个含 SKILL.md 的直接子目录算一个技能。
+#       所以一个预设一个目录：不要把这些 key 都指向同一个目录，否则技能会互相污染。
 #       详见 docs/external-skills.md。
+#
+# 用脚本（npm run skills -- sync）时不需要本文件：sync 会按
+# .generated/preset-skills/<预设id>/ 自动生成，并覆盖手写内容。
 
 ui-design:
-  - 'D:\tools\dsh-external-skills'
+  - 'D:\tools\dsh-external-skills\ui-design'
 
 product-design:
-  - 'D:\tools\dsh-external-skills'
+  - 'D:\tools\dsh-external-skills\product-design'
 
 frontend-dev:
-  - 'D:\tools\dsh-external-skills'
+  - 'D:\tools\dsh-external-skills\frontend-dev'
 
 backend-dev:
-  - 'D:\tools\dsh-external-skills'
+  - 'D:\tools\dsh-external-skills\backend-dev'

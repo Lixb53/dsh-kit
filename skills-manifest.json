@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "note": "外部技能声明：来源与版本 pin 的机器可读真源，来自 docs/skill-catalog.md。kind=auto 的技能可由 scripts/skills-manager.mjs 自动下载安装；kind=manual 的只有说明，需按 catalog 手动安装。安装到本机 .generated/external-skills/，挂载映射由 sync 生成到 gitignore 的 external-skills.local.yaml。",
+  "note": "外部技能声明：来源与版本 pin 的机器可读真源，来自 docs/skill-catalog.md。kind=auto 的技能可由 scripts/skills-manager.mjs 自动下载安装；kind=manual 的只有说明，需按 catalog 手动安装。下载物安装到 .generated/external-skills/<包id>/（不挂载）；sync 按本字段 presets 平铺到 .generated/preset-skills/<预设id>/<技能名>/ 作为挂载点，并生成 gitignore 的 external-skills.local.yaml。",
   "packages": [
     {
       "id": "one-line-prototype",

@@ -11,7 +11,7 @@
 | 层 | 位置 | 是否入库 | 作用 |
 |---|---|---|---|
 | ① 声明源 | `presets/*.yaml`、`skills/`、`skills-manifest.json` | 是 | 你维护的真相源：角色提示词、引用的内部技能、外部技能清单与 pin |
-| ② 外部技能下载物 | `.generated/external-skills/` | 否（gitignore） | 脚本按 pin 拉取的外部知识包，按预设平铺、互不污染 |
+| ② 外部技能 | 下载物 `.generated/external-skills/<包id>/` + 挂载点 `.generated/preset-skills/<预设id>/` | 否（gitignore） | 包按 pin 下载到前者（不挂载）；后者每个预设一个目录，只放该预设可见的技能，bundle 指向它 |
 | ③ 本机 bundle | `.generated/dsh-role-presets/`（`package.json` + `cordis.patch.yml`） | 否（gitignore） | 由 ① + ② 在本机渲染出的 DSH bundle，路径按本机推导 |
 | ④ 已安装插件 | DSH profile（本机如 `G:\dsh-env\home\profiles\desktop`） | 否 | ③ 装进 DSH 后生效，GUI 里可选预设 |
 
@@ -56,16 +56,23 @@ npm ci
 
 ### 步骤 1.3 — 一键安装外部技能（推荐）
 
-外部技能是各角色的"知识包"。脚本按 [skills-manifest.json](skills-manifest.json) 的版本 pin 自动下载，并按预设隔离：
+外部技能是各角色的"知识包"。脚本按 [skills-manifest.json](skills-manifest.json) 的版本 pin 自动下载，并按预设隔离（下载物与挂载点分两层，见下表）：
 
 ```powershell
 cd G:\dsh-kit
-npm run skills -- install     # 下载 8 个可自动安装的包
-npm run skills -- doctor      # 自检完整性，应显示"全部 auto 技能安装完整"
-npm run skills -- sync        # 生成按角色隔离的挂载映射 external-skills.local.yaml
+npm run skills -- install     # 下载 8 个可自动安装的包 → .generated/external-skills/<包id>/
+npm run skills -- doctor      # 自检安装完整性 + 挂载点是否与清单一致
+npm run skills -- sync        # 平铺到 .generated/preset-skills/<预设id>/，并生成 external-skills.local.yaml
 ```
 
-成功后 `external-skills.local.yaml` 应包含 product-design / ui-design / frontend-dev 三个挂载根（backend-dev 的三个包都是手动类，故无映射属正常）。查看内容：`npm run skills -- status`。
+成功后 `external-skills.local.yaml` 应包含 product-design / ui-design / frontend-dev 三个挂载根，每个指向自己的 `.generated\preset-skills\<预设id>`（backend-dev 的三个包都是手动类，故无映射属正常）。查看内容：`npm run skills -- status`。
+
+| 目录 | 内容 | 是否挂载 |
+|---|---|---|
+| `.generated/external-skills/<包id>/` | 按 pin 下载的原始包，含 `.dsh-source.json` | 否（只作为复制源） |
+| `.generated/preset-skills/<预设id>/<技能名>/SKILL.md` | 该预设可见的技能 | 是（`customSkillDirs` 指向这一层） |
+
+一个预设一个挂载根，**不要**把同一个目录配给多个预设：一条 `customSkillDirs` 会整体暴露目录下的所有技能，共用就会互相污染。
 
 脚本会自动装这些（实测已全部验证）：
 
@@ -116,7 +123,7 @@ Get-ChildItem G:\dsh-kit\.generated\dsh-role-presets
 Select-String -Path G:\dsh-kit\.generated\dsh-role-presets\cordis.patch.yml -Pattern 'customSkillDirs' -Context 0,1 | Select-Object -First 12
 ```
 
-期望每个预设挂自己的 `skills\<分组>` +（外部技能）`.generated\external-skills\<预设>`——都是运行时推导的路径，不是写死的常量。
+期望每个预设挂自己的 `skills\<分组>` +（外部技能）`.generated\preset-skills\<预设id>`——都是运行时推导的路径，不是写死的常量；预设之间不共用挂载目录。
 
 ### 步骤 1.5 — 把 bundle 装进 DSH
 
@@ -242,6 +249,7 @@ manual 包（CLI/MCP/插件）按 catalog 在新机器各自重装。开新会�
 | `skills -- install` 下载失败 | git 代理/凭据问题 | 确认 `git ls-remote https://github.com/...` 能通；脚本沿用你的 gitconfig |
 | `skills -- doctor` 报未安装/版本不符 | 没装或清单 ref 变了 | `npm run skills -- install` 或 `update` |
 | 外部技能没生效 | 没 `sync` 或没重渲染 bundle | `skills -- sync` → `install:presets` → 重装 bundle |
+| `.generated/external-skills/` 下出现与预设同名的目录 | 旧版把挂载点放在下载物同一层 | 跑一次 `skills -- sync`：自动清理旧布局残留，挂载点改在 `.generated/preset-skills/<预设id>/` |
 | `npm test` 报 `spawnSync ... EPERM` | 旧版 check-render 用子进程；当前已直接调用 | 确认已 pull 到 `400629c` 之后 |
 | git 提交报 `.git/index.lock: Permission denied` | Windows 文件权限 | 本机已为当前用户补 `.git` 完整控制权限；恢复脚本在 `G:\dsh-work\acl-recovery\acl-backup-b5372d9587fe4a909455246a1032dd91.json.ps1`（不建议恢复，否则 git 又写不进） |
 | 技能找不到（warn 技能未挂载） | 移动/重命名了仓库目录 | 在新位置重跑 `install:presets`，再重装 bundle |

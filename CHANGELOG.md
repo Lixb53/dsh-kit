@@ -43,6 +43,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- `skills-manager.mjs` 挂载布局改为「下载物与挂载点分两层」：旧版把挂载根 `.generated/external-skills/<预设id>/` 与包目录 `.generated/external-skills/<包id>/` 混在同一层，包 id 与预设 id 同名时（如 pm-skills、code-review-skill）会互相覆盖、sync 还会误删包目录，生成的 bundle 挂载的技能集合错乱。现在下载物留在 `.generated/external-skills/<包id>/`（不挂载），挂载点独立到 `.generated/preset-skills/<预设id>/<技能名>/`；`sync` 先算挂载计划并校验（预设不存在、入口缺 SKILL.md、技能重名即中止），通过后整体重建，复制时跳过 `.git` / `.dsh-source.json`，并自动清理旧布局残留。预设清单改从 `presets/*.yaml` 读取，不再硬编码。`doctor` 升级为校验挂载点与计划一致 + 声明漂移警告；`status` 显示每个预设实际挂载的技能。改后需重跑 `skills -- sync` → `install:presets` → 重装 bundle。
+
 ### Added
 
 - `scripts/skills-manager.mjs` + `skills-manifest.json` + `npm run skills`：按 `docs/skill-catalog.md` 的 pin 一键安装/更新/删除外部技能，支持 `list/install/update/remove/sync/status/doctor`。下载用 `git fetch` 固定 tag/commit，跨平台；按预设平铺到独立挂载根，保持角色隔离。`sync` 生成 gitignore 的 `external-skills.local.yaml`。
