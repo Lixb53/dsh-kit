@@ -49,6 +49,7 @@
 
 ### Fixed
 
+- 渲染器补齐两处**当前 DSH 版本必填、无默认值**的插件配置，否则整个预设挂载失败、GUI 里直接看不到：`tool-todo` 补 `config.allowParallelInProgress`（缺了 `product-design` 主预设挂载失败），critic 预设的 `tool-fs-search` 补 `config.sampleOverCapGlobResults`（缺了所有 critic 预设挂载失败）。挂载失败的行会被 registry 标记 `broken`，而新任务选择器只渲染 `broken === undefined` 的预设，所以症状是「装了但选择器里没有」；设置页的 Agent 预设分区仍会显示带「加载失败」的卡片。改后需重跑 `install:presets` 并重载预设 bundle。
 - `skills-manager.mjs` 挂载布局改为「下载物与挂载点分两层」：旧版把挂载根 `.generated/external-skills/<预设id>/` 与包目录 `.generated/external-skills/<包id>/` 混在同一层，包 id 与预设 id 同名时（如 pm-skills、code-review-skill）会互相覆盖、sync 还会误删包目录，生成的 bundle 挂载的技能集合错乱。现在下载物留在 `.generated/external-skills/<包id>/`（不挂载），挂载点独立到 `.generated/preset-skills/<预设id>/<技能名>/`；`sync` 先算挂载计划并校验（预设不存在、入口缺 SKILL.md、技能重名即中止），通过后整体重建，复制时跳过 `.git` / `.dsh-source.json`，并自动清理旧布局残留。预设清单改从 `presets/*.yaml` 读取，不再硬编码。`doctor` 升级为校验挂载点与计划一致 + 声明漂移警告；`status` 显示每个预设实际挂载的技能。改后需重跑 `skills -- sync` → `install:presets` → 重装 bundle。
 
 ### Added

@@ -283,7 +283,13 @@ function renderPreset(preset, opts) {
       `              fetch: true`,
     ],
     jobs: [`          - id: tool-jobs`, `            name: '@deepseek-ai/dsh-tool-jobs'`],
-    todo: [`          - id: tool-todo`, `            name: '@deepseek-ai/dsh-tool-todo'`],
+    // allowParallelInProgress 是本版本 tool-todo 的必填项（无默认值），缺失会让整棵 preset 挂载失败。
+    todo: [
+      `          - id: tool-todo`,
+      `            name: '@deepseek-ai/dsh-tool-todo'`,
+      `            config:`,
+      `              allowParallelInProgress: true`,
+    ],
     present: [`          - id: present`, `            name: '@deepseek-ai/dsh-tool-present'`],
     askUser: [
       `          - id: tool-ask-user`,
@@ -362,6 +368,9 @@ function renderCritic(preset, opts) {
     `              applyPatch: false`,
     `          - id: tool-fs-search`,
     `            name: '@deepseek-ai/dsh-tool-fs-search'`,
+    `            config:`,
+    // sampleOverCapGlobResults 是本版本 tool-fs-search 的必填项（无默认值），缺失会让 critic preset 挂载失败。
+    `              sampleOverCapGlobResults: false`,
   ].join('\n');
 }
 
