@@ -43,6 +43,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- `install-presets.mjs` 默认**每个预设生成一个独立 bundle**（`.generated/dsh-role-presets/<预设id>/`，包名 `@local/dsh-preset-<预设id>`）：想装哪个角色就装哪个目录，单独卸载/升级互不影响；critic 与主预设同包（`agentPreset` 引用不能跨 bundle）。`--combined` 保留旧四合一单包形态；`--only` 只重建指定预设的 bundle 目录。bundle 的 `package.json` 版本改为从 `version.txt` 注入（旧版写死 1.0.0）。
+
 ### Fixed
 
 - `skills-manager.mjs` 挂载布局改为「下载物与挂载点分两层」：旧版把挂载根 `.generated/external-skills/<预设id>/` 与包目录 `.generated/external-skills/<包id>/` 混在同一层，包 id 与预设 id 同名时（如 pm-skills、code-review-skill）会互相覆盖、sync 还会误删包目录，生成的 bundle 挂载的技能集合错乱。现在下载物留在 `.generated/external-skills/<包id>/`（不挂载），挂载点独立到 `.generated/preset-skills/<预设id>/<技能名>/`；`sync` 先算挂载计划并校验（预设不存在、入口缺 SKILL.md、技能重名即中止），通过后整体重建，复制时跳过 `.git` / `.dsh-source.json`，并自动清理旧布局残留。预设清单改从 `presets/*.yaml` 读取，不再硬编码。`doctor` 升级为校验挂载点与计划一致 + 声明漂移警告；`status` 显示每个预设实际挂载的技能。改后需重跑 `skills -- sync` → `install:presets` → 重装 bundle。

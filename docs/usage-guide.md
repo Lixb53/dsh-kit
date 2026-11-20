@@ -12,7 +12,7 @@
 |---|---|---|---|
 | ① 声明源 | `presets/*.yaml`、`skills/`、`skills-manifest.json` | 是 | 你维护的真相源：角色提示词、引用的内部技能、外部技能清单与 pin |
 | ② 外部技能 | 下载物 `.generated/external-skills/<包id>/` + 挂载点 `.generated/preset-skills/<预设id>/` | 否（gitignore） | 包按 pin 下载到前者（不挂载）；后者每个预设一个目录，只放该预设可见的技能，bundle 指向它 |
-| ③ 本机 bundle | `.generated/dsh-role-presets/`（`package.json` + `cordis.patch.yml`） | 否（gitignore） | 由 ① + ② 在本机渲染出的 DSH bundle，路径按本机推导 |
+| ③ 本机 bundle | `.generated/dsh-role-presets/<预设id>/`（每个 `package.json` + `cordis.patch.yml`） | 否（gitignore） | 由 ① + ② 在本机渲染出的 DSH bundle，**一个预设一个包**，可单独安装/卸载；路径按本机推导 |
 | ④ 已安装插件 | DSH profile（本机如 `G:\dsh-env\home\profiles\desktop`） | 否 | ③ 装进 DSH 后生效，GUI 里可选预设 |
 
 日常流程：改① → 装/更新② → 渲染③ → 装进④ → 新会话选预设。换机器只重做②③④。
@@ -108,34 +108,38 @@ npm run install:presets
 
 ```
 ✓ bundle 已生成：G:\dsh-kit\.generated\dsh-role-presets
+    backend-dev          G:\dsh-kit\.generated\dsh-role-presets\backend-dev
+    frontend-dev         G:\dsh-kit\.generated\dsh-role-presets\frontend-dev
+    product-design       G:\dsh-kit\.generated\dsh-role-presets\product-design
+    ui-design            G:\dsh-kit\.generated\dsh-role-presets\ui-design
 ```
 
 核对生成物：
 
 ```powershell
 Get-ChildItem G:\dsh-kit\.generated\dsh-role-presets
-# 应有 cordis.patch.yml 和 package.json
+# 应有四个预设目录，每个目录里有 cordis.patch.yml 和 package.json
 ```
 
 验证挂载正确（可选）：
 
 ```powershell
-Select-String -Path G:\dsh-kit\.generated\dsh-role-presets\cordis.patch.yml -Pattern 'customSkillDirs' -Context 0,1 | Select-Object -First 12
+Select-String -Path G:\dsh-kit\.generated\dsh-role-presets\product-design\cordis.patch.yml -Pattern 'customSkillDirs' -Context 0,2
 ```
 
-期望每个预设挂自己的 `skills\<分组>` +（外部技能）`.generated\preset-skills\<预设id>`——都是运行时推导的路径，不是写死的常量；预设之间不共用挂载目录。
+期望每个预设的 bundle 只挂自己的 `skills\<分组>` +（外部技能）`.generated\preset-skills\<预设id>`——都是运行时推导的路径，不是写死的常量；预设之间不共用挂载目录，bundle 也互相独立。
 
 ### 步骤 1.5 — 把 bundle 装进 DSH
 
-两种方式任选其一：
+**一个预设一个 bundle，想装哪个角色就装哪个目录**（四个都要就装四个）。两种方式任选其一：
 
 **方式 A：让我来装（推荐）**
-对我说：「把 G:\dsh-kit\.generated\dsh-role-presets 安装为 DSH bundle」。我调用 `plugin_manager install_bundle` 完成并回报结果。
+对我说：「把 G:\dsh-kit\.generated\dsh-role-presets\product-design 安装为 DSH bundle」（或列出多个目录）。我调用 `plugin_manager install_bundle` 完成并回报结果。
 
 **方式 B：GUI 手动装**
-打开 `http://127.0.0.1:60400` → 设置/插件管理（Plugins）→ 添加插件（Add plugin）→ 选本地目录 → 选中 `G:\dsh-kit\.generated\dsh-role-presets` → 确认。
+打开 `http://127.0.0.1:60400` → 设置/插件管理（Plugins）→ 添加插件（Add plugin）→ 选本地目录 → 选中某个预设目录（如 `...\dsh-role-presets\product-design`）→ 确认。
 
-成功判断：插件列表出现 `@local/dsh-role-presets` 且状态 enabled。若带错误诊断，把诊断文本发我。
+成功判断：插件列表出现 `@local/dsh-preset-<预设id>`（如 `@local/dsh-preset-product-design`）且状态 enabled。只装了部分预设时，列表里就只有那几个——这正是独立安装的用途。若带错误诊断，把诊断文本发我。
 
 ### 步骤 1.6 — 验证生效
 
@@ -192,7 +196,7 @@ npm test                      # 必须 0 错误
 npm run install:presets       # 重新生成本机 bundle
 ```
 
-然后**重装/更新 bundle**（方式 A 让我装，或 GUI 里更新），最后开**新会话**验证。已有会话不会吃到新定义（DSH 设计如此）。
+然后**重装/更新对应预设的 bundle**（改了哪个预设就重装哪个目录；方式 A 让我装，或 GUI 里更新），最后开**新会话**验证。已有会话不会吃到新定义（DSH 设计如此）。
 
 > 改预设**结构**（新增字段/改渲染语义）须同步 `scripts/render-presets.mjs` 与 `docs/presets.md`。
 
@@ -231,7 +235,7 @@ cd dsh-kit
 npm ci
 npm run skills -- install && npm run skills -- sync   # 外部技能按新机器重新拉取
 npm run install:presets
-# 把新打印的 .generated/dsh-role-presets 装进本机 DSH
+# 把新打印的 .generated/dsh-role-presets/<预设id> 装进本机 DSH
 ```
 
 manual 包（CLI/MCP/插件）按 catalog 在新机器各自重装。开新会话验证四个预设出现。
@@ -263,7 +267,7 @@ manual 包（CLI/MCP/插件）按 catalog 在新机器各自重装。开新会�
 npm ci
 npm run skills -- install && npm run skills -- sync
 npm run install:presets
-# → 安装 .generated/dsh-role-presets 到 DSH，开新会话
+# → 安装 .generated/dsh-role-presets/<需要的预设id> 到 DSH，开新会话
 
 # 外部技能维护
 npm run skills -- list / status / doctor
