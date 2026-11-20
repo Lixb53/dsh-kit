@@ -90,7 +90,7 @@ npm ci
 npm run install:presets
 ```
 
-脚本在**本机**渲染，生成 `.generated/dsh-role-presets/`（含 `package.json` + `cordis.patch.yml`）。路径由运行时的仓库根推导——不依赖当前工作目录，也不写死 `G:\` 或 `/home`，Windows / macOS / Linux 通用。`.generated/` 与 `cordis.patch.yml` 都已 gitignore。
+脚本在**本机**渲染，**每个预设生成一个独立 bundle**：`.generated/dsh-role-presets/<预设id>/`（各含 `package.json` + `cordis.patch.yml`，包名 `@local/dsh-preset-<预设id>`）。想装哪个角色就装哪个目录，卸载/升级互不影响；critic 评审预设与它的主预设在同一个 bundle 里（引用不能跨包）。路径由运行时的仓库根推导——不依赖当前工作目录，也不写死 `G:\` 或 `/home`，Windows / macOS / Linux 通用。`.generated/` 与 `cordis.patch.yml` 都已 gitignore。
 
 每个预设的技能挂载长这样（目录由本机 root 推导）：
 
@@ -102,14 +102,15 @@ customSkillDirs:
 常用参数：
 
 ```bash
-node scripts/install-presets.mjs --only product-design,ui-design  # 只生成部分预设
+node scripts/install-presets.mjs --only product-design,ui-design  # 只生成部分预设的 bundle
+node scripts/install-presets.mjs --combined                       # 退回单包：四个预设装进一个 bundle
 node scripts/render-presets.mjs --no-critic                       # 不生成评审预设
 node scripts/render-presets.mjs --out cordis.patch.yml            # 只渲染 patch（调试用）
 ```
 
 ### 3. 安装到 DSH
 
-把上一步生成的 `.generated/dsh-role-presets/` 作为 bundle 安装（用 `plugin_manager install_bundle` 或 GUI 插件管理）。它声明为 `@local/dsh-role-presets`，可整体卸载、重装、升级。
+把需要的预设的 bundle 目录（如 `.generated/dsh-role-presets/product-design/`）作为 bundle 安装（用 `plugin_manager install_bundle` 或 GUI 插件管理）。每个包名 `@local/dsh-preset-<预设id>`，可单独安装、卸载、升级；四个都要就四个目录都装。
 
 ### 4. 换机器 / 换系统
 
@@ -119,7 +120,7 @@ node scripts/render-presets.mjs --out cordis.patch.yml            # 只渲染 pa
 git clone <repo> && cd dsh-kit
 npm ci
 npm run install:presets
-# 把新生成的 .generated/dsh-role-presets/ 装进本机的 DSH profile
+# 把新生成的 .generated/dsh-role-presets/<预设id>/ 逐个装进本机的 DSH profile
 ```
 
 旧机器上的 bundle 留着无妨；新机器重新生成、重新安装即可。外部技能的本机路径写在 gitignore 的 `external-skills.local.yaml` 里，同样每台机器各配一份。

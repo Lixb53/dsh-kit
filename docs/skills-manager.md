@@ -37,7 +37,7 @@ npm ci
 npm run skills -- install    # 下载 auto 技能到 .generated/external-skills/
 npm run skills -- sync       # 平铺到 .generated/preset-skills/<预设id>/ 并生成挂载映射
 npm run install:presets      # 渲染并生成本机 bundle
-# 把 .generated/dsh-role-presets 装进 DSH，开新会话验证
+# 把 .generated/dsh-role-presets/<预设id> 装进 DSH，开新会话验证
 ```
 
 ## 增删改与维护
@@ -74,7 +74,7 @@ git clone <repo> && cd dsh-kit
 npm ci
 npm run skills -- install && npm run skills -- sync
 npm run install:presets
-# 安装 .generated/dsh-role-presets 到本机 DSH
+# 安装 .generated/dsh-role-presets/<预设id> 到本机 DSH
 ```
 
 manual 包按 catalog 各自在新机器重装/重配。

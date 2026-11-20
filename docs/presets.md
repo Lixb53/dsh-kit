@@ -58,7 +58,7 @@ npm run install:presets   # 推荐：生成可迁移、可卸载的本地 bundle
 node scripts/render-presets.mjs --out cordis.patch.yml
 ```
 
-`install:presets` 会在本机生成 `.generated/dsh-role-presets/`（`@local/dsh-role-presets` bundle），用 `plugin_manager install_bundle` 安装。脚本为每个预设生成一条 `@deepseek-ai/dsh-agent-preset` 插入项，并把 `critic.enabled: true` 的预设渲染成两条：主预设 + `<id>-critic` 只读评审预设（`tool-fs` 关掉 write/edit，不挂 shell）。生成结果的结构由 `scripts/check-render.mjs` 校验。
+`install:presets` 会在本机**为每个预设生成一个独立 bundle**：`.generated/dsh-role-presets/<预设id>/`（`@local/dsh-preset-<预设id>`，含 `package.json` + `cordis.patch.yml`），用 `plugin_manager install_bundle` 安装单个目录即可，安装/卸载/升级互不影响；`--combined` 退回四合一单包（`@local/dsh-role-presets`）。脚本为每个预设生成一条 `@deepseek-ai/dsh-agent-preset` 插入项，并把 `critic.enabled: true` 的预设渲染成两条：主预设 + `<id>-critic` 只读评审预设（`tool-fs` 关掉 write/edit，不挂 shell）——critic 与它的主预设在同一个 bundle 里，因为 `agentPreset` 引用不能跨 bundle。生成结果的结构由 `scripts/check-render.mjs` 校验。
 
 渲染器也可作为模块导入（`renderPresets()` / `REPO_ROOT`），这样校验与安装脚本无需子进程，规避某些沙箱下的 `spawn EPERM`。
 
