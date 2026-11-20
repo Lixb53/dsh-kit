@@ -49,11 +49,12 @@
 
 ## 推送与 PR（main 已开启分支保护）
 
-`main` 已开启保护：禁止强推/删除；合入需 1 approval + `validate` 检查通过 + 分支与 main 同步。`enforce_admins: false`，管理员可直接 push，但**日常一律走 PR**，不要直接 push main。
+`main` 已开启保护：禁止强推/删除；合入必须走 PR，且 `validate` 检查通过 + 分支与 main 同步。审批数为 0——GitHub 不允许作者自审，单人仓库要求 approval 只会逼出 `--admin` 绕过，门禁形同虚设；真正的把关是 `validate`（= `npm test`）。日常一律走 PR，不要直接 push main。
 
 - 改动前从最新 main 切分支：`git checkout main && git pull && git checkout -b feat/<desc>`（或 `fix/`、`docs/`）。
 - 提交后推分支、开 PR：`git push -u origin <branch>` → `gh pr create --fill`。
-- 合并前确认 `validate` 通过；Release Please 的 Release PR 走同样的 approve + 合并流程。
+- 等 `gh pr checks <n> --watch` 出现 `validate pass`，再 `gh pr merge <n> --squash` 合并。
+- Release Please 的 Release PR 走同样流程；若它落后 main，先 `gh pr update-branch <n>` 再合并。
 - 合并用 squash merge，保持线性历史，CHANGELOG 才干净。
 
 ## 合并前

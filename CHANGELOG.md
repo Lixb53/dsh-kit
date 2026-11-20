@@ -53,6 +53,7 @@
 
 ### Changed
 
+- `main` 分支保护的审批要求调整为 0 approval：GitHub 不允许作者自审，单人仓库的 1 approval 只会逼出 `--admin` 绕过；合入门禁改为「PR + `validate` 检查通过 + 分支同步」。AGENTS.md 的「推送与 PR」段同步更新。
 - `AGENTS.md` 增补「推送与 PR」硬约束：`main` 已开启分支保护（禁强推/删除、合入需 1 approval + `validate` 通过 + 分支同步），日常改动一律切分支走 PR、squash 合并；与 `CONTRIBUTING.md` 的 GitHub Flow 对齐。
 - 跨机器可移植性：`customSkillDirs` 由运行时的仓库根推导（默认从脚本位置计算，不依赖 cwd / 操作系统），不再把 `G:\dsh-kit\skills\...` 写死进渲染结果；`.generated/` 与 `cordis.patch.yml` 加入 `.gitignore`。
 
