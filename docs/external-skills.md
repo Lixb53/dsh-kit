@@ -29,21 +29,25 @@
 
 ### 2. 整理成 DSH 可发现的布局
 
-DSH 的一条 `customSkillDirs` 指向一个目录，并把它下面**每个含 `SKILL.md` 的直接子目录**当作一个技能暴露。因此安装根目录下应当是这样：
+DSH 的一条 `customSkillDirs` 指向一个目录，并把它下面**每个含 `SKILL.md` 的直接子目录**当作一个技能暴露。因此布局要**按预设分根**：一个预设一个目录，只放该角色该看的技能。
 
 ```
 <dsh-external-skills>/
-├── ui-ux-pro-max/
-│   └── SKILL.md
-├── ux-ui-agent-skills/
-│   └── SKILL.md
-├── accessibility-agents/
-│   └── SKILL.md
-└── frontend-design/
-    └── SKILL.md
+├── product-design/            ← product-design 预设的挂载根
+│   ├── deliver-prd/SKILL.md
+│   └── one-line-prototype/SKILL.md
+├── ui-design/                 ← ui-design 预设的挂载根
+│   ├── ui-ux-pro-max/SKILL.md
+│   └── a11y-core/SKILL.md
+└── frontend-dev/              ← frontend-dev 预设的挂载根
+    └── core-web-vitals/SKILL.md
 ```
 
-如果某个上游包把 `SKILL.md` 放在更深的位置（例如 `skills/foo/SKILL.md`），安装后把它平铺到 `<install-root>/foo/SKILL.md`，或在 catalog 里记一条「需要先平铺」的说明。**不要**指到 `skills/` 那一层中间目录，否则 DSH 看不到 `SKILL.md`。
+> 不要把同一个目录配给多个预设：一条 `customSkillDirs` 会整体暴露目录下所有技能，共用就失去角色隔离（后端预设想看 Vue 规则就会看到）。
+
+如果某个上游包把 `SKILL.md` 放在更深的位置（例如 `skills/foo/SKILL.md`），复制时把它平铺成 `<预设根>/foo/SKILL.md`。**不要**指到 `skills/` 那一层中间目录，否则 DSH 看不到 `SKILL.md`。
+
+> 用脚本时不用手做这一步：`npm run skills -- sync` 会按 `skills-manifest.json` 的 `presets` 字段自动平铺到 `.generated/preset-skills/<预设id>/<技能名>/`，原始包留在 `.generated/external-skills/<包id>/` 不挂载。
 
 ### 3. 写本机挂载配置
 
@@ -58,10 +62,13 @@ copy external-skills.local.example.yaml external-skills.local.yaml   # Windows
 
 ```yaml
 # key = 预设 id，value = 该预设要额外挂载的本地外部技能安装目录列表
+# 每个预设指向自己的根，不要共用同一目录
 ui-design:
-  - 'D:\tools\dsh-external-skills'
+  - 'D:\tools\dsh-external-skills\ui-design'
 product-design:
-  - 'D:\tools\dsh-external-skills'
+  - 'D:\tools\dsh-external-skills\product-design'
+frontend-dev:
+  - 'D:\tools\dsh-external-skills\frontend-dev'
 ```
 
 - 多条目录可以挂多个安装根（例如不同来源分开存放）。
