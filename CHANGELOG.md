@@ -47,6 +47,11 @@
 
 - `install-presets.mjs` 默认**每个预设生成一个独立 bundle**（`.generated/dsh-role-presets/<预设id>/`，包名 `@local/dsh-preset-<预设id>`）：想装哪个角色就装哪个目录，单独卸载/升级互不影响；critic 与主预设同包（`agentPreset` 引用不能跨 bundle）。`--combined` 保留旧四合一单包形态；`--only` 只重建指定预设的 bundle 目录。bundle 的 `package.json` 版本改为从 `version.txt` 注入（旧版写死 1.0.0）。
 
+### Added
+
+- `scripts/check-plugin-config.mjs`（`npm run check:config`）：用**本机正在运行的 DSH 安装**里每个插件真实的 `Config` schema（schemastery 的 `~standard.validate`，与 Cordis 启动时 `resolveConfig()` 同一条路径）逐行校验渲染出的预设 `config`。补的是 `check-render.mjs` 的结构性盲区——它只看我们自己的渲染结构，看不到上游 schema；而上游把某个字段改成 `.required()` 且不给默认值时，失败只会在**挂载阶段**暴露，表现为「bundle 装好了却在选择器里看不到」。已接入 `npm test`；`install:presets` 在 `$DSH_INSTALL_DIR` 存在时自动串联，校验不通过即中止安装。拿不到安装目录时（如 CI 的 ubuntu runner、普通 node 面对 `app.asar`）跳过并返回 0，打印跳过原因，不阻断流程。
+- `docs/presets.md` 增补「校验」章节与「为什么需要 check-plugin-config」，记录失败链路（单行 schema 失败 → 整棵预设 broken → 选择器过滤 broken 预设 → 无可见报错）与 Desktop 下用 `ELECTRON_RUN_AS_NODE=1` 运行的方式。
+
 ### Fixed
 
 - 渲染器补齐两处**当前 DSH 版本必填、无默认值**的插件配置，否则整个预设挂载失败、GUI 里直接看不到：`tool-todo` 补 `config.allowParallelInProgress`（缺了 `product-design` 主预设挂载失败），critic 预设的 `tool-fs-search` 补 `config.sampleOverCapGlobResults`（缺了所有 critic 预设挂载失败）。挂载失败的行会被 registry 标记 `broken`，而新任务选择器只渲染 `broken === undefined` 的预设，所以症状是「装了但选择器里没有」；设置页的 Agent 预设分区仍会显示带「加载失败」的卡片。改后需重跑 `install:presets` 并重载预设 bundle。

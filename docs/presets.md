@@ -130,5 +130,29 @@ npm test
 
 - `scripts/validate-skills.mjs`（零依赖）：技能两级布局、`id` 与文件名一致、`skills` 引用的技能存在、`deliverables` 非空、`persona` 非空、`version.txt` / manifest / `package.json` 三者版本一致、预设未自带 `version`、CHANGELOG 结构。
 - `scripts/check-render.mjs`（需 js-yaml）：渲染结果是合法 YAML、每个预设都挂 `persona` / `skill-filesystem` / `tool-skill`、**技能隔离成立**、评审预设只读且无 shell、`critic` 引用的预设存在。
+- `scripts/check-plugin-config.mjs`（需 js-yaml + 本机 DSH）：用**本机正在运行的 DSH 安装**里每个插件真实的 `Config` schema，逐行校验渲染出的 `config`。
+
+### 为什么需要 check-plugin-config
+
+`@deepseek-ai/dsh-agent-preset` 只负责注册声明，真正挂载子插件树由 registry 的 `mountPreset()` 完成。**任何一行插件激活失败（包括 schema 校验失败）都会让整棵预设挂载被拒绝**，registry 把该预设标记为 `broken`；而 Web 端新任务选择器只渲染 `broken === undefined` 的预设，于是失败表现为「bundle 装好了、也启用了，但选择器里看不到」，没有任何可见报错（设置页的 Agent 预设分区仍会显示带「加载失败」的卡片）。
+
+最常见的触发方式是**上游把某个配置字段改成 `.required()` 且不给默认值**：我们渲染时只写了 `name`，本机一升级 DSH 就静默失效。`check-render.mjs` 只看我们自己的渲染结构，看不到上游 schema，所以需要这个脚本补位。
+
+已发生的实例：`dsh-tool-todo` 的 `allowParallelInProgress`、`dsh-tool-fs-search` 的 `sampleOverCapGlobResults`。
+
+### 运行方式
+
+```bash
+# 普通 node：能从安装目录读到包时校验，读不到则跳过并返回 0
+node scripts/check-plugin-config.mjs
+
+# Desktop（安装在 app.asar 内）：必须用运行中的 Electron 以 node 模式执行
+$env:ELECTRON_RUN_AS_NODE = '1'
+& "$env:DSH_NODE_EXECUTABLE" scripts/check-plugin-config.mjs
+```
+
+- 安装目录取 `$DSH_INSTALL_DIR`，或用 `--dsh-install <dir>` 指定。
+- **拿不到安装目录（例如 CI 的 ubuntu runner）时跳过并返回 0**，不会卡住 `npm test`；跳过原因会打印出来。
+- `npm run install:presets` 在 `$DSH_INSTALL_DIR` 存在时会自动串联这一步，校验不通过就中止安装——趁早失败，而不是等到 GUI 里发现预设消失。
 
 CI 用同一套脚本。
