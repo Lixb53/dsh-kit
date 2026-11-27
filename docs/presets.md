@@ -17,7 +17,7 @@
 | `skills` | 是 | 引用本仓库 `skills/<group>/<name>/` 下的技能名，不得内联正文；同时决定挂载哪些分组 |
 | `external_skills` | 否 | 需要额外安装的外部技能包（见 `docs/skill-catalog.md`） |
 | `tools` | 否 | 工具白名单：`fs` / `pwsh` / `web` / `jobs` / `todo` / `present` / `askUser` / `codegraph` |
-| `mcp` | 否 | 需要的 MCP 服务名：`playwright` / `backendpro` / `postgres` |
+| `mcp` | 否 | 预留字段：渲染器当前**不输出**预设级 MCP；需要 MCP 请在 profile 层配置，不要指望它随预设挂载 |
 | `critic` | 否 | 只读评审子代理：`enabled`、`mode: read-only`。评审标准由 critic 预设挂载的技能提供，预设里不再内联 rubric |
 | `deliverables` | 是 | 产物路径清单，用 `<feature>` / `<service>` 占位 |
 | `handoff` | 否 | `to`（下游预设）与 `artifact`（交接物） |

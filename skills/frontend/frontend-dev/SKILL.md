@@ -82,6 +82,35 @@ license: MIT
 - 区分 blocking / important / nit / praise。
 - 审查范围：逻辑正确性、边界、安全（XSS/注入）、性能、可测试性、可访问性；格式问题交给 linter。
 
+### 第 6 步：独立评审（critic，按需）
+
+critic 是 `critic` 工具 spawn 的独立只读子代理（`provider: spawn`）：**它看不到本对话**，调用时 prompt 必须自包含；它只能读文件，不能改代码、不跑命令、不跑浏览器。
+
+**何时启动（命中任一，且每次恰好一轮）**
+
+- T1 用户本轮明确要求评审 / 复查 / 独立看看。
+- T2 含不可逆或高代价决策：大重构、性能预算敏感改动、架构或技术选型取舍。
+- T3 确定性门禁全过，但对某个只有第二双眼睛能判的维度没有把握——须先声明具体理由。
+
+其余情况不启动，并在交付里写一行「未经独立评审（按需 critic 未触发）」，不得省略。
+
+**调用时传什么（五样，缺一不可；禁止传自评、修复理由、辩护、聊天摘要）**
+
+1. 本轮 diff 涉及的文件清单。
+2. 锁定契约：方向卡与令牌的相关条目。
+3. 评审维度与分档：正确性 / 性能 / 安全 / 可维护性，按严重度输出。
+4. 输出格式：`[blocking]/[important]/[nit]/[praise] 文件:行号 — 问题 — 影响 — 建议` + 门禁结论。
+5. 可检查的验收标准（性能预算、浏览器范围、可访问性等级）。
+
+**轮次与产物**
+
+- 只跑一轮；返工后按清单自查 + 重跑确定性门禁，只有用户明确要求才开第二轮（仅对账上轮问题）。
+- 报告原文存 `app/review/code-review.md`。
+- 门禁三态：存在 P0 或被判不通过 → 返工；全维通过且无未处理 P0/P1 → 交付；其余呈报用户。
+- 禁止全量代码库扫描，只看传入的 diff 范围；评审期间冻结产物。
+- critic 无 shell、无浏览器：需实测的结论写「需实测 / 阻塞项」，不得写成已验证。
+- 主代理不得自评替代 critic。
+
 ## 交付物
 
 ```
@@ -90,9 +119,18 @@ app/
 ├── tests/
 │   ├── unit/
 │   └── e2e/
-├── perf-report.md      # 预算与实际测量
-└── review.md           # 审查结论（如有）
+├── perf-report.md          # 预算与实际测量（有性能改动时）
+└── review/code-review.md   # 独立评审结论（仅按需 critic 触发时产出）
 ```
+
+## 确定性门禁（C0，必跑）
+
+- 修改后必跑：类型检查、lint、构建、相关单测；命令以项目 `package.json` scripts 为准，不猜命令。
+- E2E 核心路径真跑；未真跑不得写「已验证」。
+- 性能结论必须有测量数据（Lighthouse / CWV / DevTools trace 或项目内脚本）；预算不达标需显式豁免与理由。
+- 审查意见必须带 `文件:行号` 与严重度；无证据的空泛建议删除。
+- 控制台无报错、无未处理 Promise rejection。
+- 全过才交付；任一不过回到对应阶段修复并重跑。
 
 ## 验收门禁
 
@@ -102,6 +140,7 @@ app/
 - E2E 核心路径通过；失败用例有诊断信息。
 - 无硬编码颜色/间距（令牌外）；无 Emoji 结构图标。
 - 审查结论逐条带文件:行号。
+- critic 未触发时，交付中已写「未经独立评审（按需 critic 未触发）」一行。
 
 ## 与其他角色的交接
 
@@ -111,4 +150,4 @@ app/
 
 ## 可配合的外部技能包
 
-`vercel react-best-practices`、`composition-patterns`、`web-design-guidelines`、`playwright` 官方技能、`code-review-skill`、`web-quality-skills`。见 [`docs/skill-catalog.md`](../../docs/skill-catalog.md)。
+`vercel react-best-practices`、`composition-patterns`、`web-design-guidelines`、`code-review-skill`、`web-quality-skills`。`playwright skills` 由 `playwright-cli` 分发（**manual 可选**，不进默认挂载），需要时按 [`docs/skill-catalog.md`](../../docs/skill-catalog.md) 安装。选型理由见同一文档。

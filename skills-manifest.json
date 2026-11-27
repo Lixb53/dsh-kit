@@ -38,8 +38,8 @@
       "repo": "github/spec-kit",
       "ref": "v1.4.2",
       "license": "MIT",
-      "presets": ["product-design"],
-      "note": "CLI + 命令模板，不是 SKILL.md 目录。按 docs/skill-catalog.md 用 pip/uv 安装后在项目里 specify init。"
+      "presets": [],
+      "note": "CLI + 命令模板，不是 SKILL.md 目录。按 docs/skill-catalog.md 用 pip/uv 安装后在项目里 specify init；不进默认预设（manual）。"
     },
     {
       "id": "ui-ux-pro-max",
@@ -157,8 +157,8 @@
       "repo": "microsoft/playwright",
       "ref": "随 playwright-cli 版本",
       "license": "未核实",
-      "presets": ["frontend-dev"],
-      "note": "由 playwright-cli 分发，按 catalog 执行 playwright-cli install --skills。"
+      "presets": [],
+      "note": "由 playwright-cli 分发，按 catalog 执行 playwright-cli install --skills；不进默认预设（manual）。"
     },
     {
       "id": "backendpro",
