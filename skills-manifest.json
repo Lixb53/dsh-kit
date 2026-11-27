@@ -110,6 +110,21 @@
       ]
     },
     {
+      "id": "antfu-skills",
+      "label": "Vue/Nuxt/Pinia/Vitest（由官方文档生成，Anthony Fu 维护）",
+      "kind": "auto",
+      "repo": "antfu/skills",
+      "ref": "4a6bb39e7b45e26402eb215393c51ccf5df1ca4c",
+      "license": "MIT",
+      "presets": ["frontend-dev"],
+      "entries": [
+        { "src": "skills/vue", "name": "vue" },
+        { "src": "skills/nuxt", "name": "nuxt" },
+        { "src": "skills/pinia", "name": "pinia" },
+        { "src": "skills/vitest", "name": "vitest" }
+      ]
+    },
+    {
       "id": "code-review-skill",
       "label": "多语言代码审查（含 Vue/CSS）",
       "kind": "auto",

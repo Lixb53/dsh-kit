@@ -291,6 +291,13 @@ function renderPreset(preset, opts) {
       `              allowParallelInProgress: true`,
     ],
     present: [`          - id: present`, `            name: '@deepseek-ai/dsh-tool-present'`],
+    // 由 profile 安装的 dsh-plugin-codegraph bundle 提供，不是 DSH 自带包；
+    // 服务（codegraph / sqlite / tree-sitter）留在 Host 层，仅把模型可见的
+    // codegraph 工具挂到本预设，因此在别的预设里看不到该工具。
+    codegraph: [
+      `          - id: tool-codegraph`,
+      `            name: 'dsh-plugin-codegraph-tool'`,
+    ],
     askUser: [
       `          - id: tool-ask-user`,
       `            name: '@deepseek-ai/dsh-tool-ask-user'`,

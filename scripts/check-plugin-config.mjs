@@ -19,6 +19,7 @@
  * 前提：必须能读到 DSH 安装目录里的包。Desktop 版安装在 `app.asar` 内，普通 node
  * 读不了，需要
  *   ELECTRON_RUN_AS_NODE=1 "<DSH_NODE_EXECUTABLE>" scripts/check-plugin-config.mjs
+ * 预设引用的 profile 插件会再从 `$DSH_PROFILE_DIR` 解析，并按需动态 import()。
  * 本脚本在找不到安装目录、或普通 node 面对 .asar 时会**跳过并返回 0**，这样 CI
  * （没有 DSH 安装）和 `npm test` 不会被卡住；跳过原因会打印出来。
  *
@@ -31,6 +32,7 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { createRequire } from 'node:module';
+import { pathToFileURL } from 'node:url';
 import { renderPresets } from './render-presets.mjs';
 
 const argv = process.argv.slice(2);
@@ -73,6 +75,14 @@ if (!existsSync(anchorManifest)) {
 }
 
 const anchorRequire = createRequire(anchorManifest);
+
+// 预设可以挂载 profile 安装的插件（例如 dsh-plugin-codegraph-tool），这类包不在
+// DSH 安装目录的依赖树里，只从 profile 的 package.json 才能解析。
+const profileDir = process.env.DSH_PROFILE_DIR ?? null;
+const profileRequire =
+  profileDir !== null && existsSync(join(profileDir, 'package.json'))
+    ? createRequire(join(profileDir, 'package.json'))
+    : null;
 let dshVersion = '未知';
 try {
   dshVersion = JSON.parse(readFileSync(anchorManifest, 'utf8')).version ?? '未知';
@@ -102,15 +112,15 @@ try {
 // 3. 解析一个插件包：目录 + 导出模块
 // ---------------------------------------------------------------------------
 
-/** 把 "@scope/name" 解析成 { dir, pkg }；导出受限时回退到入口文件反推目录。 */
-function resolvePackage(specifier) {
+/** 从某个 require 视点把 "@scope/name" 解析成 { dir, pkg, require }；失败返回 null。 */
+function resolveFrom(req, specifier) {
   let manifestPath = null;
   try {
-    manifestPath = anchorRequire.resolve(`${specifier}/package.json`);
+    manifestPath = req.resolve(`${specifier}/package.json`);
   } catch {
     // 包的 exports 可能不导出 ./package.json，改用入口反推。
     try {
-      const entry = anchorRequire.resolve(specifier);
+      const entry = req.resolve(specifier);
       let dir = dirname(entry);
       for (let depth = 0; depth < 8; depth += 1) {
         const candidate = join(dir, 'package.json');
@@ -134,28 +144,47 @@ function resolvePackage(specifier) {
   } catch {
     return null;
   }
-  return { dir, pkg };
+  return { dir, pkg, require: req };
+}
+
+/** 先按 DSH 安装目录解析，再按 profile 解析（预设引用 profile 插件时用得上）。 */
+function resolvePackage(specifier) {
+  for (const req of [anchorRequire, profileRequire]) {
+    if (req === null) continue;
+    const found = resolveFrom(req, specifier);
+    if (found !== null) return { ...found, fromProfile: req === profileRequire };
+  }
+  return null;
 }
 
 /**
  * 取一个插件的 Config schema。
+ * 先按 CJS 加载；ESM-only 包（如 profile 插件）回退到动态 import()。
  * @returns {object|null} schemastery schema，或 null（该插件没有 Config）
  */
-function loadConfigSchema(specifier) {
+async function loadConfigSchema(specifier) {
   const found = resolvePackage(specifier);
-  if (found === null) return { error: '无法从 DSH 安装目录解析该包（可能已改名或未随版本发布）' };
+  if (found === null) return { error: '无法从 DSH 安装目录或 profile 解析该包（可能已改名或未安装）' };
 
+  const main = found.pkg.main ?? 'index.js';
   let mod = null;
   try {
     // 直接 require 包目录：CJS 会读 package.json 的 main。
-    mod = anchorRequire(found.dir);
-  } catch (error) {
-    // ESM-only 包退回按 main/exports 的入口文件加载。
-    const main = found.pkg.main ?? 'index.js';
+    mod = found.require(found.dir);
+  } catch {
     try {
-      mod = anchorRequire(join(found.dir, main));
+      mod = found.require(join(found.dir, main));
     } catch {
-      return { error: `加载模块失败：${String(error.message).split('\n')[0]}` };
+      try {
+        mod = await import(pathToFileURL(join(found.dir, main)).href);
+      } catch (error) {
+        // profile 插件的 peer 依赖（@deepseek-ai/dsh-tools 等）只在 DSH 安装目录里，
+        // 从 profile 视点 import 时解析不到；这类行没有 config 可校验，跳过而不是误报失败。
+        if (found.fromProfile) {
+          return { skipped: `profile 插件无法在此视点加载（缺少 Host peer 依赖），跳过 schema 校验` };
+        }
+        return { error: `加载模块失败：${String(error.message).split('\n')[0]}` };
+      }
     }
   }
 
@@ -216,8 +245,13 @@ for (const layer of Array.isArray(doc) ? doc : []) {
       }
 
       if (!schemaCache.has(name)) schemaCache.set(name, loadConfigSchema(name));
-      const loaded = schemaCache.get(name);
+      const loaded = await schemaCache.get(name);
 
+      if (loaded.skipped !== undefined) {
+        skippedEntries += 1;
+        say(`    .  ${rowId}（${loaded.skipped}）`);
+        continue;
+      }
       if (loaded.error !== undefined) {
         failures.push(`${presetId} / ${rowId}（${name}）：${loaded.error}`);
         say(`    x  ${rowId}  ${name}`);
