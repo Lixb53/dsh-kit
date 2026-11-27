@@ -17,6 +17,9 @@
 * **scripts:** `persona` 改为可选——`render-presets.mjs` 仅在预设写了 `persona` 时渲染 persona 插件；`renderCritic()` 不再生成硬编码评审者 persona；`validate-skills.mjs` / `check-render.mjs` 同步放宽（存在时必须非空）。
 * **docs:** `AGENTS.md` / `docs/presets.md` / `CONTRIBUTING.md` / `README.md` 把「薄预设」定为默认形态，并更新字段表、示例与校验说明。
 * **skills:** `ui-design` 技能补回**按需 critic 的调用契约**（薄化后 persona 里的 C1 规则曾随 prefix 一起丢失）：触发条件 T1/T2/T3、只跑一轮、五样自包含输入（子代理不共享对话）、报告落 `review/5b-round-1.md`、门禁三态、未触发须显式声明；交付物路径同步为 `review/5b-round-1.md`。
+* **presets:** `product-design` / `frontend-dev` 与薄预设对齐：删除 persona（96 / 105 行常驻提示词）与内联 `critic.rubric`；移除无效的 `mcp` 字段（渲染器不输出预设级 MCP，文档改注在 profile 层配置）；frontend-dev 补 `tool-todo`。
+* **skills:** 两个角色技能补回确定性门禁（C0）与按需 critic 契约（T1/T2/T3、五样自包含输入、报告落 `requirements/<feature>/review/critique.md` 与 `app/review/code-review.md`、未触发声明）；删除无落点的引用（`dsh-preview` / `dsh-frontend-replay` / `dsh-qa-skills` / `logicprobe` / `qa 回归` / 自写 checklist 等）。
+* **skills:** `spec-kit`（CLI）与 `playwright-cli skills` 从预设 `external_skills` 与 `skills-manifest.json` 的 `presets` 中移除，改标「manual 可选、不进默认预设」；交付物路径统一（product → `review/critique.md`，frontend → `app/review/code-review.md`）。
 
 ## [1.2.0](https://github.com/Lixb53/dsh-kit/compare/v1.1.0...v1.2.0) (2026-11-19)
 

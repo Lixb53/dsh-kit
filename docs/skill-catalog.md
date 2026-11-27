@@ -17,7 +17,7 @@
 |---|---|---|---|---|
 | [one-line-prototype](https://github.com/Sunnyshinnny776/one-line-prototype) | 一句话需求 → PRD + 泳道图 + 可交互原型 + 确认单 | Apache-2.0 | `v0.2.0` | 纯技能 |
 | [pm-skills](https://github.com/product-on-purpose/pm-skills) | 68 个产品技能，取 PRD/故事/验收/ADR/Mermaid/pm-critic | Apache-2.0 | `v2.35.1` | 纯技能 |
-| [spec-kit](https://github.com/github/spec-kit) | 规格驱动流程与收敛检查（L 级需求） | MIT | `v1.4.2` | CLI + 流程 |
+| [spec-kit](https://github.com/github/spec-kit) | 规格驱动流程与收敛检查（L 级需求） | MIT | `v1.4.2` | CLI + 流程；**manual，不进默认预设** |
 
 ## UI 设计
 
@@ -36,7 +36,7 @@
 | [react-best-practices](https://github.com/vercel-labs/agent-skills) | 按影响排序的 React/Next 性能规则 | 自述 MIT（README），仓库无 LICENSE 文件 | `agent-skills-1a2c79d4e6c4a2283dc2c614b6538cbe1ed5ca62` | 纯技能（安装名 `vercel-react-best-practices`） |
 | [composition-patterns](https://github.com/vercel-labs/agent-skills) | 复合组件、状态提升、避免布尔 prop | 同上 | 同上（同仓库同 release） | 纯技能 |
 | [web-design-guidelines](https://github.com/vercel-labs/agent-skills) | UI 合规审查（同仓库 release 资产） | 同上 | 同上（同仓库同 release） | 纯技能（见下方注意） |
-| [playwright skills](https://playwright.dev/agent-cli/skills) | 测试生成/heal/trace/会话 | 未核实（由 `playwright-cli` 分发，非独立 skill 仓库；安装时随 cli 复制） | 随 `playwright-cli` 版本 | 需浏览器，`playwright-cli install --skills` |
+| [playwright skills](https://playwright.dev/agent-cli/skills) | 测试生成/heal/trace/会话 | 未核实（由 `playwright-cli` 分发，非独立 skill 仓库；安装时随 cli 复制） | 随 `playwright-cli` 版本 | 需浏览器，`playwright-cli install --skills`；**manual，不进默认预设** |
 | [code-review-skill](https://github.com/awesome-skills/code-review-skill) | 20+ 语言代码审查，含 React/Vue/CSS | MIT | `4850184dfd7765ea7b3c5c4e9b6cf8e0815ee7cb`（commit，无 tag） | 纯技能 |
 | [web-quality-skills](https://github.com/addyosmani/web-quality-skills) | Lighthouse/CWV/性能/SEO | MIT（各 `SKILL.md` frontmatter 亦标 `license: MIT`） | `afa8da942115f2961fdbfa80807ea0b232ff6c00`（commit，对应 2.0.0，无 tag） | 需浏览器或 CLI |
 
