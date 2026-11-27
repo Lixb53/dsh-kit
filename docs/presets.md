@@ -2,7 +2,9 @@
 
 `presets/<id>.yaml` 是声明式清单：描述「这个预设有什么职责、用哪些技能、能碰哪些工具、按什么标准评审、交付什么」。它是配置来源，不是可执行代码。
 
-预设不限于「角色」：团队预设、评审器（critic）预设、单一工作流预设都可以用同一套字段描述；区别只在 `persona`、`tools` 与 `mcp` 的收紧程度。
+预设不限于「角色」：团队预设、评审器（critic）预设、单一工作流预设都可以用同一套字段描述；区别只在挂哪些技能、`tools` 与 `mcp` 的收紧程度。
+
+**默认形态是薄预设**：预设本身不写行为文本（没有 `persona`），只声明「挂哪些技能、能碰哪些工具、按什么标准评审、交付什么」。角色的工作流与门禁写在技能里（`SKILL.md`），技能按需加载、不常驻上下文。`persona` 仍支持，但只用于确实需要常驻的边界声明，不是默认写法。
 
 ## 字段
 
@@ -11,12 +13,12 @@
 | `id` | 是 | 必须与文件名一致，lowercase kebab-case |
 | `name` | 是 | 展示名 |
 | `description` | 建议 | 一行说明；渲染成 DSH 预设的 `description`，缺省时从 `persona` 截取 |
-| `persona` | 是 | 角色人格与边界，写「做什么、不做什么、依据从哪来」 |
+| `persona` | 否 | 常驻角色人格与边界。**薄预设不写**：行为交给技能；写了就渲染成 persona 插件的 `prefix` |
 | `skills` | 是 | 引用本仓库 `skills/<group>/<name>/` 下的技能名，不得内联正文；同时决定挂载哪些分组 |
 | `external_skills` | 否 | 需要额外安装的外部技能包（见 `docs/skill-catalog.md`） |
-| `tools` | 否 | 工具白名单：`fs` / `pwsh` / `web` / `jobs` / `todo` / `present` / `askUser` |
+| `tools` | 否 | 工具白名单：`fs` / `pwsh` / `web` / `jobs` / `todo` / `present` / `askUser` / `codegraph` |
 | `mcp` | 否 | 需要的 MCP 服务名：`playwright` / `backendpro` / `postgres` |
-| `critic` | 否 | 只读评审子代理：`enabled`、`mode: read-only`、`rubric` 维度 |
+| `critic` | 否 | 只读评审子代理：`enabled`、`mode: read-only`。评审标准由 critic 预设挂载的技能提供，预设里不再内联 rubric |
 | `deliverables` | 是 | 产物路径清单，用 `<feature>` / `<service>` 占位 |
 | `handoff` | 否 | `to`（下游预设）与 `artifact`（交接物） |
 
@@ -33,13 +35,12 @@
 
 `npm test` 会校验前三者一致、且预设里没有 `version`。
 
-## 最小示例
+## 最小示例（薄预设）
 
 ```yaml
 id: my-role
 name: 我的角色
-persona: |
-  你是……
+description: 一句话说明这个角色何时被选中
 skills:
   - my-skill
 tools:
@@ -47,6 +48,8 @@ tools:
 deliverables:
   - out/<feature>/
 ```
+
+角色「怎么做」写在 `skills/<group>/my-skill/SKILL.md`，预设只引用名字。
 
 ## 渲染成 DSH 配置
 
@@ -90,11 +93,12 @@ customSkillDirs:
         name: 我的角色
         description: 从 presets/my-role.yaml 生成
         plugins:
+          # 薄预设没有这一段；只有写了 persona 才渲染 persona 插件
           - id: persona
             name: '@deepseek-ai/dsh-persona'
             config:
               prefix: |
-                （把 persona 贴到这里）
+                （可选：把 persona 贴到这里）
           - id: skill-filesystem
             name: '@deepseek-ai/dsh-skill-filesystem'
             config:
@@ -119,8 +123,8 @@ customSkillDirs:
 
 - `customSkillDirs` 指向**分组目录**；渲染器已按 `skills:` 自动填写，一般不需要手写。
 - 不要在仓库里提交绝对路径：生成物（`.generated/`、`cordis.patch.yml`）和外部技能本机映射（`external-skills.local.yaml`）都已 gitignore，换机器时重新生成/配置。
-- `critic` 需要另建一个只读预设（`tool-fs` 关掉 write/edit），否则评审者会顺手改文件。
-- `persona` 里的「不做什么」比「做什么」更重要，它决定角色边界。
+- `critic` 需要另建一个只读预设（`tool-fs` 关掉 write/edit），否则评审者会顺手改文件；该评审预设同样是薄预设，评审标准来自它挂载的技能。
+- 薄预设的「不做什么」写在技能里比写在 persona 里更可靠：技能只在需要时加载，不会每轮都占用上下文。
 
 ## 校验
 
@@ -128,9 +132,9 @@ customSkillDirs:
 npm test
 ```
 
-- `scripts/validate-skills.mjs`（零依赖）：技能两级布局、`id` 与文件名一致、`skills` 引用的技能存在、`deliverables` 非空、`persona` 非空、`version.txt` / manifest / `package.json` 三者版本一致、预设未自带 `version`、CHANGELOG 结构。
-- `scripts/check-render.mjs`（需 js-yaml）：渲染结果是合法 YAML、每个预设都挂 `persona` / `skill-filesystem` / `tool-skill`、**技能隔离成立**、评审预设只读且无 shell、`critic` 引用的预设存在。
-- `scripts/check-plugin-config.mjs`（需 js-yaml + 本机 DSH）：用**本机正在运行的 DSH 安装**里每个插件真实的 `Config` schema，逐行校验渲染出的 `config`。
+- `scripts/validate-skills.mjs`（零依赖）：技能两级布局、`id` 与文件名一致、`skills` 引用的技能存在、`deliverables` 非空、`version.txt` / manifest / `package.json` 三者版本一致、预设未自带 `version`、CHANGELOG 结构。`persona` 可选，不检查其是否存在。
+- `scripts/check-render.mjs`（需 js-yaml）：渲染结果是合法 YAML、每个预设都挂 `skill-filesystem` / `tool-skill`（`persona` 可选，存在时 `prefix` 不得为空）、**技能隔离成立**、评审预设只读且无 shell、`critic` 引用的预设存在。
+- `scripts/check-plugin-config.mjs`（需 js-yaml + 本机 DSH）：用**本机正在运行的 DSH 安装**里每个插件真实的 `Config` schema，逐行校验渲染出的 `config`。`tools: codegraph` 渲染出的 `dsh-plugin-codegraph-tool` 由 profile 安装的 codegraph bundle 提供，不在 DSH 安装目录内，因此该脚本还会从 `$DSH_PROFILE_DIR` 解析包并支持 ESM 插件。
 
 ### 为什么需要 check-plugin-config
 
@@ -152,6 +156,7 @@ $env:ELECTRON_RUN_AS_NODE = '1'
 ```
 
 - 安装目录取 `$DSH_INSTALL_DIR`，或用 `--dsh-install <dir>` 指定。
+- 预设里引用的 profile 插件（如 `dsh-plugin-codegraph-tool`）从 `$DSH_PROFILE_DIR` 的 `package.json` 解析；ESM-only 包回退到动态 `import()` 读取 `Config`。这类插件的 peer 依赖（`@deepseek-ai/dsh-tools` 等）只在 DSH 安装目录内，从 profile 视点无法加载时会**跳过并标注**，不算失败。profile 未安装对应 bundle 时，预设挂载会因模块缺失而失败。
 - **拿不到安装目录（例如 CI 的 ubuntu runner）时跳过并返回 0**，不会卡住 `npm test`；跳过原因会打印出来。
 - `npm run install:presets` 在 `$DSH_INSTALL_DIR` 存在时会自动串联这一步，校验不通过就中止安装——趁早失败，而不是等到 GUI 里发现预设消失。
 

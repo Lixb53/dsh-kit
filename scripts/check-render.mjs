@@ -5,7 +5,7 @@
  * 检查：
  *  1. 渲染输出是合法 YAML，顶层为 `- insert: [...]`
  *  2. 每个预设条目有 id / name / description / plugins
- *  3. 每个预设都挂了 persona、skill-filesystem、tool-skill
+ *  3. 每个预设都挂了 skill-filesystem、tool-skill；persona 可选（薄预设不写，写了则 prefix 不能为空）
  *  4. 声明了 critic.enabled 的预设，对应 critic 预设存在，且 tool-fs 为只读
  *  5. critic 预设的 id 唯一，且以 `-critic` 结尾
  *  6. 技能隔离：预设只挂载它引用的技能所在分组，不挂无关分组
@@ -130,7 +130,7 @@ for (const [id, entry] of byId) {
   }
 
   const pluginIds = cfg.plugins.map((p) => p.id);
-  for (const required of ['persona', 'skill-filesystem', 'tool-skill']) {
+  for (const required of ['skill-filesystem', 'tool-skill']) {
     if (!pluginIds.includes(required)) err(`${id}: 缺少插件 ${required}`);
   }
 
@@ -140,9 +140,10 @@ for (const [id, entry] of byId) {
     err(`${id}: skill-filesystem.customSkillDirs 为空`);
   }
 
+  // persona 可选：薄预设靠技能提供行为，不写 persona 不算错；写了就必须有内容。
   const persona = cfg.plugins.find((p) => p.id === 'persona');
-  if (!persona?.config?.prefix || String(persona.config.prefix).trim() === '') {
-    err(`${id}: persona.prefix 为空`);
+  if (persona && String(persona.config?.prefix ?? '').trim() === '') {
+    err(`${id}: persona.prefix 为空（不需要 persona 时请整条移除）`);
   }
 
   if (id.endsWith('-critic')) {

@@ -4,6 +4,19 @@
 
 格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
+## [Unreleased]
+
+### Features
+
+* **presets:** frontend-dev 通过 `tools: codegraph` 挂载 codegraph 工具，仅该预设可见
+* **scripts:** check-plugin-config 支持从 `$DSH_PROFILE_DIR` 解析 profile 插件并加载 ESM-only 包
+
+### Changed
+
+* **presets!:** `ui-design` 改为薄预设，**彻底删除 persona prefix**（主预设与 critic 预设都不再有常驻提示词，内联 rubric 一并移除）：角色工作流与评审标准全部由挂载的技能提供。`presets/ui-design.yaml` 只保留 id/name/description/skills/external_skills/tools/mcp/critic/deliverables/handoff。
+* **scripts:** `persona` 改为可选——`render-presets.mjs` 仅在预设写了 `persona` 时渲染 persona 插件；`renderCritic()` 不再生成硬编码评审者 persona；`validate-skills.mjs` / `check-render.mjs` 同步放宽（存在时必须非空）。
+* **docs:** `AGENTS.md` / `docs/presets.md` / `CONTRIBUTING.md` / `README.md` 把「薄预设」定为默认形态，并更新字段表、示例与校验说明。
+
 ## [1.2.0](https://github.com/Lixb53/dsh-kit/compare/v1.1.0...v1.2.0) (2026-11-19)
 
 
@@ -45,6 +58,7 @@
 
 ### Added
 
+- `frontend-dev` 预设补上 Vue 系技能：新增外部包 `antfu-skills`（`vue` / `nuxt` / `pinia` / `vitest`，pin commit `4a6bb39e7b45e26402eb215393c51ccf5df1ca4c`）。此前 persona 只在正文点名框架技能、`external_skills` 未声明，开箱看不到对应技能；现在四个技能随预设挂载。React 系维持 `vercel-react-best-practices` + `composition-patterns`，并把 persona 中无来源的 tanstack-query / zustand / next 技能承诺改为「项目级 `.dsh/skills/` 或 `node_modules` 内版本匹配文档补充」。
 - `install-presets.mjs` 默认**每个预设生成一个独立 bundle**（`.generated/dsh-role-presets/<预设id>/`，包名 `@local/dsh-preset-<预设id>`）：想装哪个角色就装哪个目录，单独卸载/升级互不影响；critic 与主预设同包（`agentPreset` 引用不能跨 bundle）。`--combined` 保留旧四合一单包形态；`--only` 只重建指定预设的 bundle 目录。bundle 的 `package.json` 版本改为从 `version.txt` 注入（旧版写死 1.0.0）。
 
 ### Added

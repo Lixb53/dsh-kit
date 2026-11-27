@@ -154,7 +154,7 @@ node scripts/check-render.mjs      # 需 js-yaml：渲染结果与技能隔离
 - 每个 `presets/*.yaml` 的 `id` 与文件名一致，`skills:` 引用的技能全部存在；
 - `CHANGELOG.md` 含 `## [Unreleased]`；
 - `version.txt` 与 `.release-please-manifest.json` 的版本一致；
-- 渲染出的 `cordis.patch.yml` 片段是合法 YAML，每个预设都挂了 `persona` / `skill-filesystem` / `tool-skill`；
+- 渲染出的 `cordis.patch.yml` 片段是合法 YAML，每个预设都挂了 `skill-filesystem` / `tool-skill`；`persona` 可选（薄预设不写，写了则 `prefix` 不得为空）；
 - **技能隔离**：预设只挂载它引用的技能所在分组，挂载无关分组即失败；
 - 评审预设的 `tool-fs` 必须只读且不挂 shell，`critic` 引用的预设必须存在。
 
