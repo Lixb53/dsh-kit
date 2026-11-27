@@ -131,7 +131,7 @@ PR 描述就三行：**改了什么、对应 Issue、是否已更新 CHANGELOG/�
 `scripts/check-render.mjs`（需 `js-yaml`）检查渲染结果：
 
 - 输出是合法 YAML，顶层为 `- insert:` 列表；
-- 每个预设都挂 `persona` / `skill-filesystem` / `tool-skill`，且 `customSkillDirs` 非空；
+- 每个预设都挂 `skill-filesystem` / `tool-skill`，且 `customSkillDirs` 非空；`persona` 可选（薄预设不写，写了则 `prefix` 不得为空）；
 - **技能隔离**：预设挂载的分组必须恰好是它引用的技能所在分组——多挂无关分组即失败，漏挂也失败；
 - 评审预设（`<id>-critic`）的 `tool-fs` 必须 `write:false` / `edit:false`，且不挂 shell；
 - `critic` 插件引用的预设存在；

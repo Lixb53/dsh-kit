@@ -32,6 +32,7 @@
 
 | 包 | 用途 | 许可 | 版本 pin | 安装/适配 |
 |---|---|---|---|---|
+| [antfu/skills](https://github.com/antfu/skills) | Vue 3 / Nuxt / Pinia / Vitest 的使用规则与最佳实践（由各项目官方文档生成） | MIT | `4a6bb39e7b45e26402eb215393c51ccf5df1ca4c`（commit，无 tag，采集于 2026-11-20） | 纯技能；取 `vue` / `nuxt` / `pinia` / `vitest` 四个 |
 | [react-best-practices](https://github.com/vercel-labs/agent-skills) | 按影响排序的 React/Next 性能规则 | 自述 MIT（README），仓库无 LICENSE 文件 | `agent-skills-1a2c79d4e6c4a2283dc2c614b6538cbe1ed5ca62` | 纯技能（安装名 `vercel-react-best-practices`） |
 | [composition-patterns](https://github.com/vercel-labs/agent-skills) | 复合组件、状态提升、避免布尔 prop | 同上 | 同上（同仓库同 release） | 纯技能 |
 | [web-design-guidelines](https://github.com/vercel-labs/agent-skills) | UI 合规审查（同仓库 release 资产） | 同上 | 同上（同仓库同 release） | 纯技能（见下方注意） |
@@ -40,6 +41,8 @@
 | [web-quality-skills](https://github.com/addyosmani/web-quality-skills) | Lighthouse/CWV/性能/SEO | MIT（各 `SKILL.md` frontmatter 亦标 `license: MIT`） | `afa8da942115f2961fdbfa80807ea0b232ff6c00`（commit，对应 2.0.0，无 tag） | 需浏览器或 CLI |
 
 > 注意：`web-design-guidelines` 在 `frontend-dev.yaml` 的 `external_skills` 中被引用，但它**不是** `anthropics/skills` 的子目录，而是 `vercel-labs/agent-skills` 的 skill（与该仓库其他前端包同一 release）。
+>
+> 注意：Vue 生态**没有 vuejs 组织直接发布的官方技能仓库**。`antfu/skills` 由 Vue 核心团队成员 Anthony Fu 维护，内容从 [`vuejs/docs`](https://github.com/vuejs/docs)、[`nuxt/nuxt`](https://github.com/nuxt/nuxt)、[`vuejs/pinia`](https://github.com/vuejs/pinia)、[`vitest-dev/vitest`](https://github.com/vitest-dev/vitest) 生成，属社区产物而非官方发布物；本仓库按「来源可查、许可明确」收录。`vue-router`、`vueuse`、TanStack Query、Zustand、Next.js 工作流暂无同等可靠的独立包，故不预置：由项目级 `.dsh/skills/` 或 `node_modules` 内版本匹配文档补充（Next.js 16.2+ 自带 `node_modules/next/dist/docs/` 与 AGENTS.md 托管指令）。
 
 ## 后端开发
 
@@ -59,9 +62,10 @@
 
 ## 核验说明
 
-许可与版本 pin 采集于 **2026-11-19**，来源为 GitHub API（`license` 字段、releases、commits）与仓库 README：
+许可与版本 pin 采集于 **2026-11-19**，`antfu/skills` 补充采集于 **2026-11-20**，来源为 GitHub API（`license` 字段、releases、commits）与仓库 README：
 
 - 许可明确的包直接取 `license` 字段；vercel 三包标注「自述 MIT」是因仓库无独立 LICENSE 文件、仅 README 声明 MIT。
 - `frontend-design` 的许可状态为文件级核验结论：仓库无根 LICENSE、元数据 `license: null`、README 措辞为「many skills ... Apache 2.0」且点名的是文档技能，**未覆盖该 skill**。
 - `playwright skills` 许可仍标「未核实」：它由 `playwright-cli` 分发而非独立 skill 仓库，未找到单独的许可声明，安装前请自行复核。
+- `antfu/skills` 无 tag，ref 取 `main` 的 commit `4a6bb39e7b45e26402eb215393c51ccf5df1ca4c`；仓库 README 与 `LICENSE.md` 均声明 MIT，四个技能的 frontmatter 标注 `author: Anthony Fu` 及其官方文档来源。
 - ref 优先取 release tag；无 release 的取 `main` 分支不可变 commit SHA。安装前按 catalog 的 pin 安装并校验（有 sha256 资产的用 `SHA256SUMS` 校验）。

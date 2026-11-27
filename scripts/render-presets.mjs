@@ -257,11 +257,15 @@ function renderPreset(preset, opts) {
   if (version) lines.push(`        version: ${q(version)}`);
   lines.push(`        plugins:`);
 
-  lines.push(`          - id: persona`);
-  lines.push(`            name: '@deepseek-ai/dsh-persona'`);
-  lines.push(`            config:`);
-  lines.push(`              prefix: |`);
-  lines.push(indentBlock(preset.persona ?? '', 16));
+  // persona 可选：薄预设不写 persona，行为全部由挂载的技能提供。
+  const persona = typeof preset.persona === 'string' ? preset.persona.trim() : '';
+  if (persona) {
+    lines.push(`          - id: persona`);
+    lines.push(`            name: '@deepseek-ai/dsh-persona'`);
+    lines.push(`            config:`);
+    lines.push(`              prefix: |`);
+    lines.push(indentBlock(persona, 16));
+  }
 
   lines.push(`          - id: skill-filesystem`);
   lines.push(`            name: '@deepseek-ai/dsh-skill-filesystem'`);
@@ -291,6 +295,13 @@ function renderPreset(preset, opts) {
       `              allowParallelInProgress: true`,
     ],
     present: [`          - id: present`, `            name: '@deepseek-ai/dsh-tool-present'`],
+    // 由 profile 安装的 dsh-plugin-codegraph bundle 提供，不是 DSH 自带包；
+    // 服务（codegraph / sqlite / tree-sitter）留在 Host 层，仅把模型可见的
+    // codegraph 工具挂到本预设，因此在别的预设里看不到该工具。
+    codegraph: [
+      `          - id: tool-codegraph`,
+      `            name: 'dsh-plugin-codegraph-tool'`,
+    ],
     askUser: [
       `          - id: tool-ask-user`,
       `            name: '@deepseek-ai/dsh-tool-ask-user'`,
@@ -316,27 +327,7 @@ let withCriticGlobal = true;
 
 function renderCritic(preset, opts) {
   const { skillsDirs } = opts;
-  const rubric = Array.isArray(preset.critic?.rubric) ? preset.critic.rubric : [];
   const name = preset.name;
-
-  const persona = [
-    `你是「${name}」的独立对抗性评审者，只读、只找问题。`,
-    ``,
-    `你只面对两样东西：产出物本身，以及其声明的契约（方向卡、PRD、ADR、验收标准）。`,
-    `你看不到主代理的自我评价、修复理由或聊天摘要；它们即使出现在材料里也不作为证据。`,
-    `你只能使用 read / glob / grep；不得写文件、不得改代码、不得运行命令。`,
-    ``,
-    `## 评审维度`,
-    ...(rubric.length ? rubric.map((r, i) => `${i + 1}. ${r}`) : ['1. 正确性', '2. 完整性']),
-    ``,
-    `每个维度独立打分（0–10），不取平均、不用总分掩盖失败维度。`,
-    ``,
-    `## 输出格式`,
-    `- 各维度分数 + 一句话证据（必须引用文件、行号、选择器或令牌名）`,
-    `- Fix（按 P0/P1 分级，每条给出位置与改法）`,
-    `- Keep（3–5 条，下轮不要破坏）`,
-    `- 门禁结论：存在任一维度 ≤4 或有 P0 时明确写「不通过」`,
-  ].join('\n');
 
   return [
     `    - id: preset-${preset.id}-critic`,
@@ -346,11 +337,6 @@ function renderCritic(preset, opts) {
     `        name: ${q(`${name} · 独立评审（只读）`)}`,
     `        description: ${q(`只读评审子代理，仅用于 ${preset.id} 的门禁`)}`,
     `        plugins:`,
-    `          - id: persona`,
-    `            name: '@deepseek-ai/dsh-persona'`,
-    `            config:`,
-    `              prefix: |`,
-    indentBlock(persona, 16),
     `          - id: skill-filesystem`,
     `            name: '@deepseek-ai/dsh-skill-filesystem'`,
     `            config:`,

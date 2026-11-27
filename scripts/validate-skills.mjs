@@ -196,7 +196,7 @@ if (!isDir(presetsDir)) {
     else if (id !== expected) err(`${where}: id "${id}" 与文件名 "${expected}" 不一致`);
 
     if (!parseYamlScalar(text, 'name')) err(`${where}: 缺少 name`);
-    if (!parseYamlScalar(text, 'persona')) err(`${where}: 缺少 persona`);
+    // persona 可选：薄预设不写 persona，行为全部由 skills: 引用的技能提供。
 
     const refs = parseYamlList(text, 'skills');
     if (refs === null) {

@@ -26,7 +26,8 @@
 ## 修改预设
 
 - 若技能名或技能所在分组变化，同步更新 `presets/*.yaml` 中所有引用。
-- 预设必须声明 `id`、`name`、`persona`、`skills`、`deliverables`。
+- 预设必须声明 `id`、`name`、`skills`、`deliverables`。
+- **默认薄预设**：不写 `persona`，行为全部由 `skills:` 引用的技能提供（技能按需加载）；只有确实需要常驻角色边界时才写 `persona`，且不得把技能正文搬进去。
 - 不得在预设中复制技能内容；只允许引用。
 - 挂载目录由渲染器按 `skills:` 自动算出，不要手写 `customSkillDirs`。
 
