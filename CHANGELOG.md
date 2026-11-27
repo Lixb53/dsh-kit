@@ -16,6 +16,7 @@
 * **presets!:** `ui-design` 改为薄预设，**彻底删除 persona prefix**（主预设与 critic 预设都不再有常驻提示词，内联 rubric 一并移除）：角色工作流与评审标准全部由挂载的技能提供。`presets/ui-design.yaml` 只保留 id/name/description/skills/external_skills/tools/mcp/critic/deliverables/handoff。
 * **scripts:** `persona` 改为可选——`render-presets.mjs` 仅在预设写了 `persona` 时渲染 persona 插件；`renderCritic()` 不再生成硬编码评审者 persona；`validate-skills.mjs` / `check-render.mjs` 同步放宽（存在时必须非空）。
 * **docs:** `AGENTS.md` / `docs/presets.md` / `CONTRIBUTING.md` / `README.md` 把「薄预设」定为默认形态，并更新字段表、示例与校验说明。
+* **skills:** `ui-design` 技能补回**按需 critic 的调用契约**（薄化后 persona 里的 C1 规则曾随 prefix 一起丢失）：触发条件 T1/T2/T3、只跑一轮、五样自包含输入（子代理不共享对话）、报告落 `review/5b-round-1.md`、门禁三态、未触发须显式声明；交付物路径同步为 `review/5b-round-1.md`。
 
 ## [1.2.0](https://github.com/Lixb53/dsh-kit/compare/v1.1.0...v1.2.0) (2026-11-19)
 
